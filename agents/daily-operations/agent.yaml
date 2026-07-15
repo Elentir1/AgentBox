@@ -1,0 +1,83 @@
+schemaVersion: agentbox/v1
+kind: ManagedAgent
+metadata:
+  id: daily-operations
+  name: AgentBox Daily Operations
+  version: 0.1.0
+  owner: AlpenData
+  market: CH
+  languages: [fr, de, en]
+spec:
+  purpose: Produire un briefing opérationnel quotidien, détecter les urgences et proposer des actions vérifiables sans agir à l'extérieur sans validation humaine.
+  targetCustomers:
+    companySize: 5-50
+    sectors: [general, services, construction, industry, professional-services]
+  runtime:
+    engine: openclaw
+    isolation: dedicated-instance
+  capabilities:
+    - read-priority-email
+    - read-calendar
+    - identify-urgent-items
+    - detect-deadlines
+    - summarize-open-actions
+    - draft-replies
+    - prepare-daily-briefing
+  connectors:
+    - id: microsoft-365-mail
+      mode: read
+      required: true
+    - id: microsoft-365-calendar
+      mode: read
+      required: true
+    - id: microsoft-365-contacts
+      mode: read
+      required: false
+  permissions:
+    default: deny
+    scopes:
+      - mail.read
+      - calendar.read
+      - contacts.read
+    prohibited:
+      - mail.send
+      - calendar.write
+      - contacts.write
+      - files.delete
+      - payments.execute
+      - shell.unrestricted
+  approvals:
+    requiredFor:
+      - external-send
+      - calendar-write
+      - destructive-action
+      - financial-commitment
+      - permission-escalation
+  schedule:
+    timezone: Europe/Zurich
+    dailyBriefing: "07:30"
+    middayRefresh: "12:30"
+  data:
+    residency: CH-or-approved-region
+    retentionDays: 30
+    containsPersonalData: true
+    redactSensitiveFields: true
+  observability:
+    auditLog: true
+    usageMetering: true
+    healthCheck: true
+    decisionTrace: true
+  successMetrics:
+    - name: time-saved-hours-per-user-month
+      target: 4
+    - name: urgent-item-recall
+      target: 0.9
+    - name: false-urgent-rate
+      target: 0.1
+    - name: briefing-open-rate
+      target: 0.75
+    - name: approved-action-rate
+      target: 0.4
+  support:
+    provider: AlpenData
+    serviceLevel: business-hours
