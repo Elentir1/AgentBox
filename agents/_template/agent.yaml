@@ -1,0 +1,41 @@
+schemaVersion: agentbox/v1
+kind: ManagedAgent
+metadata:
+  id: replace-me
+  name: Replace me
+  version: 0.1.0
+  owner: AlpenData
+  market: CH
+  languages: [fr]
+spec:
+  purpose: Describe one measurable business outcome.
+  targetCustomers:
+    companySize: 5-50
+    sectors: [general]
+  runtime:
+    engine: openclaw
+    isolation: dedicated-instance
+  capabilities: []
+  connectors: []
+  permissions:
+    default: deny
+    scopes: []
+  approvals:
+    requiredFor:
+      - external-send
+      - destructive-action
+      - financial-commitment
+  data:
+    residency: CH-or-approved-region
+    retentionDays: 30
+    containsPersonalData: false
+  observability:
+    auditLog: true
+    usageMetering: true
+    healthCheck: true
+  successMetrics:
+    - name: time-saved-hours
+      target: 0
+  support:
+    provider: AlpenData
+    serviceLevel: business-hours
