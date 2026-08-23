@@ -285,3 +285,13 @@ Skills own workflows; root owns hard policy and routing.
 - Local-only `.agents` ignores: `.git/info/exclude`, not repo `.gitignore`.
 - Provider tool schemas: prefer flat string enum helpers over `Type.Union([Type.Literal(...)])`; some providers reject `anyOf`.
 - External messaging: no token-delta channel messages. Follow `docs/concepts/streaming.md`.
+
+## Cursor Cloud specific instructions
+
+Setup/run commands are already documented in `README.md` ("From source (development)") and `package.json` scripts; the update script runs `pnpm install`. Notes below are only the non-obvious cloud gotchas.
+
+- Node gotcha: the VM's default `node` on `PATH` (`/exec-daemon/node`) is `v22.14.0`, below the repo `engines` floor (`>=22.19.0`). The update script symlinks the nvm-installed `v22.22.2` into `/usr/local/cargo/bin/node` (first on `PATH`). If `node --version` ever reports `< 22.19`, recreate it: `ln -sf "$HOME/.nvm/versions/node/v22.22.2/bin/node" /usr/local/cargo/bin/node`. `pnpm` comes from nvm/corepack.
+- First run only: `pnpm openclaw setup --baseline` (non-interactive). Plain `pnpm openclaw setup`/`openclaw onboard` need a TTY and abort in automation.
+- Run the Gateway with `pnpm gateway:watch` (tmux dev loop) or `pnpm openclaw gateway --port 18789 --verbose`. Control UI: `http://127.0.0.1:18789/`; probes `GET /healthz`, `GET /readyz`.
+- No-API-key demo path (QA Lab mock model): one-shot `pnpm openclaw qa manual --provider-mode mock-openai --message "..."`, or run a persistent mock server `pnpm openclaw qa mock-openai --port 44080` and point an `openai` provider at `http://127.0.0.1:44080/v1` with an `api_key` auth profile (any non-empty key). Mock replies are canned "Protocol note: acknowledged…" text — that is expected.
+- Tests/lint fan-out route to remote Crabbox/Testbox per this file's Commands section, which is unavailable in the cloud VM. For local proof, run focused tests with `node scripts/run-vitest.mjs run <path>` and scoped lint with `node scripts/run-oxlint.mjs --tsconfig tsconfig.json <files>`; avoid bare `pnpm test`/`pnpm lint` (heavy, sharded, remote-oriented). `pnpm build` runs locally (~2.5 min, includes `ui:build`).
