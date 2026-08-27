@@ -84,7 +84,7 @@ const DEFAULT_APPLICATION_CONFIG: ApplicationConfig = {
   allowExternalEmbedUrls: false,
   chatMessageMaxWidth: null,
   product: normalizeProductBranding(undefined),
-  shellProfile: "full",
+  shellProfile: "auto",
   terminalEnabled: readDocumentTerminalEnabled() ?? false,
 };
 
