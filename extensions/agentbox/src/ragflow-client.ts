@@ -94,9 +94,11 @@ export class RagFlowClient {
     metadata: Record<string, string | number>;
   }): Promise<string> {
     const form = new FormData();
+    const bytes = new Uint8Array(params.bytes.byteLength);
+    bytes.set(params.bytes);
     form.append(
       "file",
-      new Blob([params.bytes], { type: params.mimeType || "application/octet-stream" }),
+      new Blob([bytes.buffer], { type: params.mimeType || "application/octet-stream" }),
       params.filename,
     );
     const data = await this.request(

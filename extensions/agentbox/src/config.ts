@@ -85,21 +85,18 @@ const agentBoxConfigObject = z
 export type AgentBoxConfig = z.infer<typeof agentBoxConfigObject>;
 export type AgentBoxSourceConfig = AgentBoxConfig["sources"][number];
 
-export const agentBoxConfigSchema: OpenClawPluginConfigSchema = buildPluginConfigSchema({
-  safeParse(value) {
-    const parsed = agentBoxConfigObject.safeParse(value);
-    if (parsed.success) {
-      return { success: true, data: parsed.data };
-    }
-    return { success: false, error: { issues: mapPluginConfigIssues(parsed.error.issues) } };
-  },
-  jsonSchema: {
-    schema: {
-      type: "object",
-      additionalProperties: false,
+export const agentBoxConfigSchema: OpenClawPluginConfigSchema = buildPluginConfigSchema(
+  agentBoxConfigObject,
+  {
+    safeParse(value) {
+      const parsed = agentBoxConfigObject.safeParse(value);
+      if (parsed.success) {
+        return { success: true, data: parsed.data };
+      }
+      return { success: false, error: { issues: mapPluginConfigIssues(parsed.error.issues) } };
     },
   },
-});
+);
 
 export function resolveAgentBoxConfig(value: unknown): AgentBoxConfig {
   return agentBoxConfigObject.parse(value);
