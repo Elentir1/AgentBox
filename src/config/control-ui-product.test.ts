@@ -22,8 +22,8 @@ describe("managed Control UI product configuration", () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data.gateway?.controlUi?.product?.name).toBe("AlpenData AgentBox");
-      expect(result.data.gateway?.controlUi?.shellProfile).toBe("auto");
+      expect(result.config.gateway?.controlUi?.product?.name).toBe("AlpenData AgentBox");
+      expect(result.config.gateway?.controlUi?.shellProfile).toBe("auto");
     }
   });
 
