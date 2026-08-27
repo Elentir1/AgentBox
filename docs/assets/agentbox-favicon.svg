@@ -1,0 +1,11 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AgentBox">
+  <defs>
+    <linearGradient id="agentbox-gradient" x1="8" y1="56" x2="56" y2="8">
+      <stop offset="0" stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="#f8fafc"/>
+  <path d="M10 48 29 15l9 15 5-8 11 26H10Z" fill="url(#agentbox-gradient)"/>
+  <path d="m23 37 6-10 4 7 3-4 7 18H17l6-11Z" fill="#fff" fill-opacity=".9"/>
+</svg>

@@ -8,6 +8,11 @@ import {
 import { normalizeAssistantIdentity } from "../lib/assistant-identity.ts";
 import { setUiTimeFormatPreference } from "../lib/format.ts";
 import { resolveControlUiAuthCandidates } from "./control-ui-auth.ts";
+import {
+  applyProductBranding,
+  normalizeProductBranding,
+  type ProductBranding,
+} from "./product-branding.ts";
 
 type ApplicationConfigAuthSource = {
   hello?: { auth?: { deviceToken?: string | null } | null } | null;
@@ -28,7 +33,7 @@ const SEAM_COLOR_CSS_VARIABLES = [
   "--focus-glow",
 ] as const;
 
-type ApplicationConfig = {
+export type ApplicationConfig = {
   assistantIdentity: {
     agentId: string | null;
     name: string;
@@ -42,6 +47,8 @@ type ApplicationConfig = {
   embedSandboxMode: ControlUiEmbedSandboxMode;
   allowExternalEmbedUrls: boolean;
   chatMessageMaxWidth: string | null;
+  product: ProductBranding;
+  shellProfile: "auto" | "employee" | "full";
   terminalEnabled: boolean;
 };
 
@@ -76,6 +83,8 @@ const DEFAULT_APPLICATION_CONFIG: ApplicationConfig = {
   embedSandboxMode: "strict",
   allowExternalEmbedUrls: false,
   chatMessageMaxWidth: null,
+  product: normalizeProductBranding(undefined),
+  shellProfile: "full",
   terminalEnabled: readDocumentTerminalEnabled() ?? false,
 };
 
@@ -151,6 +160,11 @@ function normalizeApplicationConfig(parsed: ControlUiBootstrapConfig): Applicati
       typeof parsed.chatMessageMaxWidth === "string" && parsed.chatMessageMaxWidth.trim()
         ? parsed.chatMessageMaxWidth
         : null,
+    product: normalizeProductBranding(parsed.product),
+    shellProfile:
+      parsed.shellProfile === "employee" || parsed.shellProfile === "auto"
+        ? parsed.shellProfile
+        : "full",
     terminalEnabled: parsed.terminalEnabled === true,
   };
 }
@@ -197,7 +211,9 @@ async function loadApplicationConfig(params: {
     const parsed = (await res.json()) as ControlUiBootstrapConfig;
     setUiTimeFormatPreference(parsed.timeFormat);
     applyControlUiSeamColor(parsed.seamColor);
-    return normalizeApplicationConfig(parsed);
+    const config = normalizeApplicationConfig(parsed);
+    applyProductBranding(config.product);
+    return config;
   } catch {
     return null;
   }

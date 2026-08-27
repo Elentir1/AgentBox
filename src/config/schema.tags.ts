@@ -48,6 +48,8 @@ const TAG_OVERRIDES: Record<string, ConfigTag[]> = {
   "gateway.controlUi.embedSandbox": ["security", "access", "advanced"],
   "gateway.controlUi.allowExternalEmbedUrls": ["security", "access", "network", "advanced"],
   "gateway.controlUi.chatMessageMaxWidth": ["advanced"],
+  "gateway.controlUi.product": ["advanced"],
+  "gateway.controlUi.shellProfile": ["access"],
   "gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback": [
     "security",
     "access",

@@ -45,6 +45,14 @@ export type MockGatewayRequest = {
 export type ControlUiMockGatewayScenario = {
   assistantAgentId?: string;
   assistantName?: string;
+  product?: {
+    name: string;
+    shortName: string;
+    logoPath?: string;
+    faviconPath?: string;
+  };
+  shellProfile?: "auto" | "employee" | "full";
+  scopes?: string[];
   controlUiTabs?: Array<{
     group?: string;
     icon?: string;
@@ -224,7 +232,19 @@ function normalizeScenario(
     historyMessages: scenario.historyMessages ?? [],
     methodResponses: scenario.methodResponses ?? {},
     models: scenario.models ?? [{ id: "gpt-5.5", name: "gpt-5.5", provider: "openai" }],
+    product: scenario.product ?? {
+      name: "AlpenData AgentBox",
+      shortName: "AgentBox",
+    },
+    scopes: scenario.scopes ?? [
+      "operator.admin",
+      "operator.read",
+      "operator.write",
+      "operator.approvals",
+      "operator.pairing",
+    ],
     sessionKey,
+    shellProfile: scenario.shellProfile ?? "full",
     terminalEnabled: scenario.terminalEnabled ?? false,
     workspaceGit: scenario.workspaceGit ?? false,
   };
@@ -240,7 +260,9 @@ export function createControlUiMockBootstrapConfig(scenario: ControlUiMockGatewa
     basePath: "/",
     embedSandbox: "scripts",
     localMediaPreviewRoots: [],
+    product: normalizedScenario.product,
     serverVersion: "e2e",
+    shellProfile: normalizedScenario.shellProfile,
     terminalEnabled: normalizedScenario.terminalEnabled,
   };
 }
@@ -433,13 +455,7 @@ function installControlUiMockGateway(input: {
           auth: {
             deviceToken: scenario.deviceToken,
             role: "operator",
-            scopes: [
-              "operator.admin",
-              "operator.read",
-              "operator.write",
-              "operator.approvals",
-              "operator.pairing",
-            ],
+            scopes: scenario.scopes,
           },
           features: { events: [], methods: scenario.featureMethods },
           controlUiTabs: scenario.controlUiTabs,

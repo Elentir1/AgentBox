@@ -12,6 +12,25 @@ export const CONTROL_UI_TERMINAL_ENABLED_ATTRIBUTE = "data-openclaw-terminal-ena
 /** Sandbox policy for assistant-provided embed surfaces inside Control UI. */
 export type ControlUiEmbedSandboxMode = "strict" | "scripts" | "trusted";
 
+/** Customer-facing identity for a managed Control UI deployment. */
+export type ControlUiProductBranding = {
+  name: string;
+  shortName: string;
+  logoPath?: string;
+  faviconPath?: string;
+  docsUrl?: string;
+  supportUrl?: string;
+  privacyUrl?: string;
+};
+
+export const DEFAULT_CONTROL_UI_PRODUCT_BRANDING: ControlUiProductBranding = {
+  name: "AlpenData AgentBox",
+  shortName: "AgentBox",
+  docsUrl: "https://www.alpendata.ch/agentbox/docs",
+  supportUrl: "https://www.alpendata.ch/contact",
+  privacyUrl: "https://www.alpendata.ch/privacy",
+};
+
 /** Public GitHub metadata rendered by Control UI link hover cards. */
 export type ControlUiGitHubPreview = {
   additions?: number;
@@ -49,6 +68,8 @@ export type ControlUiBootstrapConfig = {
   allowExternalEmbedUrls?: boolean;
   chatMessageMaxWidth?: string;
   seamColor?: string;
+  product?: ControlUiProductBranding;
+  shellProfile?: "auto" | "employee" | "full";
   /** Resolved `agents.defaults.timeFormat`; "auto" keeps the browser locale default. */
   timeFormat?: "auto" | "12" | "24";
   /**

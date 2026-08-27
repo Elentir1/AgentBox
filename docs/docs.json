@@ -1,14 +1,14 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "name": "OpenClaw",
-  "description": "Self-hosted gateway that connects Discord, Google Chat, iMessage, Matrix, Microsoft Teams, Signal, Slack, Telegram, WhatsApp, Zalo, and more to AI coding agents. Run one Gateway process on your own machine and message your AI assistant from anywhere.",
+  "name": "AlpenData AgentBox",
+  "description": "Managed, isolated AI assistants that connect small and medium-sized businesses to their internal documents.",
   "theme": "mint",
   "icons": {
     "library": "lucide"
   },
   "logo": {
-    "light": "/assets/pixel-lobster.svg",
-    "dark": "/assets/pixel-lobster.svg"
+    "light": "/assets/agentbox-logo.svg",
+    "dark": "/assets/agentbox-logo.svg"
   },
   "fonts": {
     "body": {
@@ -18,11 +18,11 @@
       "family": "DM Sans"
     }
   },
-  "favicon": "/assets/pixel-lobster.svg",
+  "favicon": "/assets/agentbox-favicon.svg",
   "colors": {
-    "primary": "#FF5A36",
-    "dark": "#FF5A36",
-    "light": "#FF8A6B"
+    "primary": "#0F766E",
+    "dark": "#2563EB",
+    "light": "#14B8A6"
   },
   "styling": {
     "codeblocks": {
@@ -1016,6 +1016,7 @@
               {
                 "group": "Overview",
                 "pages": [
+                  "agentbox/index",
                   "index",
                   "start/showcase",
                   "concepts/features"

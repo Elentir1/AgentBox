@@ -15,7 +15,7 @@ import "../components/terminal/terminal-panel.ts";
 import "../components/tooltip.ts";
 import "../components/update-banner.ts";
 import type { SidebarNavRoute } from "../app-navigation.ts";
-import { APP_ROUTE_IDS, isRouteId, pathForRoute, type RouteId } from "../app-routes.ts";
+import { isRouteId, pathForRoute, type RouteId } from "../app-routes.ts";
 import {
   COMMAND_PALETTE_TARGET_EVENT,
   type CommandPalette,
@@ -39,17 +39,18 @@ import {
 } from "./context.ts";
 import { hasOperatorAdminAccess } from "./operator-access.ts";
 import type { ApplicationOverlaySnapshot } from "./overlays.ts";
-import { controlUiPublicAssetPath } from "./public-assets.ts";
+import { productAssetPath, type ProductBranding } from "./product-branding.ts";
 import { selectRenderedRouteMatch } from "./router-outlet.ts";
+import {
+  enabledRoutesForShell,
+  isRouteEnabledForShell,
+  resolveShellProfile,
+} from "./shell-policy.ts";
 
 type ShellRouteState = {
   routeId?: RouteId;
   location?: RouteLocation;
 };
-
-// Stable references so the sidebar's enabledRouteIds property does not churn
-// on every shell render.
-const ROUTE_IDS_WITHOUT_WORKBOARD = APP_ROUTE_IDS.filter((routeId) => routeId !== "workboard");
 
 function selectShellRouteState(routerState: RouterState<RouteId>): ShellRouteState {
   const match = selectRenderedRouteMatch(routerState.matches[0], routerState.pendingMatches[0]);
@@ -102,13 +103,13 @@ function resolveTerminalThemeMode(): "dark" | "light" {
 
 // The mascot SVG animates via SMIL, so it must load through <img src> —
 // inlining the markup would freeze it (see ui/public/favicon.svg).
-function renderConnectingSplash(basePath: string) {
+function renderConnectingSplash(basePath: string, product: ProductBranding) {
   return html`
     <main class="connect-splash" role="status" aria-live="polite" aria-label=${t("common.loading")}>
       <img
         class="connect-splash__logo"
-        src=${controlUiPublicAssetPath("favicon.svg", basePath)}
-        alt=""
+        src=${productAssetPath(product.logoPath, "agentbox-favicon.svg", basePath)}
+        alt=${product.name}
       />
     </main>
   `;
@@ -180,14 +181,11 @@ class OpenClawApp extends LitElement {
       this.updateGatewayStatus(snapshot);
       this.updateTerminalSurface();
     });
-    if (this.terminalOnly) {
-      // Terminal availability also depends on config.terminalEnabled, which
-      // can arrive after the gateway snapshot; track it for this document mode.
+    this.updateTerminalSurface();
+    this.stopConfigSubscription = this.context.config.subscribe(() => {
       this.updateTerminalSurface();
-      this.stopConfigSubscription = this.context.config.subscribe(() => {
-        this.updateTerminalSurface();
-      });
-    }
+      this.requestUpdate();
+    });
     void this.runtime.start().catch((error: unknown) => {
       console.error("[openclaw] application start failed", error);
     });
@@ -296,7 +294,7 @@ class OpenClawApp extends LitElement {
     if (initialConnectPending) {
       return html`
         <openclaw-tooltip-provider>
-          ${renderConnectingSplash(context.basePath)} ${gatewayUrlConfirmation}
+          ${renderConnectingSplash(context.basePath, context.config.current.product)}
         </openclaw-tooltip-provider>
       `;
     }
@@ -308,6 +306,7 @@ class OpenClawApp extends LitElement {
           <openclaw-login-gate
             .props=${{
               basePath: context.basePath,
+              product: context.config.current.product,
               connected: this.gatewayConnected,
               lastError: this.gatewayLastError,
               lastErrorCode: this.gatewayLastErrorCode,
@@ -525,6 +524,10 @@ class OpenClawShell extends LitElement {
     if (!context || !isRouteId(routeId)) {
       return;
     }
+    if (!isRouteEnabledForShell(routeId, this.enabledRouteIds())) {
+      routeId = "chat";
+      options = this.chatNavigationOptions();
+    }
     this.closeNavDrawer({ restoreFocus: true });
     context.navigate(routeId, routeId === "chat" ? this.chatNavigationOptions(options) : options);
   }
@@ -629,9 +632,15 @@ class OpenClawShell extends LitElement {
   }
 
   private enabledRouteIds(): readonly RouteId[] {
-    return isWorkboardEnabledInConfigSnapshot(this.context?.runtimeConfig.state.configSnapshot)
-      ? APP_ROUTE_IDS
-      : ROUTE_IDS_WITHOUT_WORKBOARD;
+    return enabledRoutesForShell({
+      profile: resolveShellProfile(
+        this.context?.config.current.shellProfile ?? "full",
+        hasOperatorAdminAccess(this.context?.gateway.snapshot.hello?.auth ?? null),
+      ),
+      workboardEnabled: isWorkboardEnabledInConfigSnapshot(
+        this.context?.runtimeConfig.state.configSnapshot,
+      ),
+    });
   }
 
   private ensureAgentsList(snapshot: { client: GatewayBrowserClient | null; connected: boolean }) {
@@ -706,6 +715,10 @@ class OpenClawShell extends LitElement {
       return nothing;
     }
     const activeRoute = this.routeState.routeId ?? "chat";
+    if (!isRouteEnabledForShell(activeRoute, this.enabledRouteIds())) {
+      queueMicrotask(() => this.replaceChatWithCurrentSession());
+      return nothing;
+    }
     // Plugin tabs share one route; the search picks the active item.
     const activePluginTabId =
       activeRoute === "plugin"
@@ -717,6 +730,7 @@ class OpenClawShell extends LitElement {
     const navCollapsed = this.navCollapsed && !navDrawerOpen;
     return html`
       <openclaw-command-palette
+        .enabledRouteIds=${this.enabledRouteIds()}
         .onNavigate=${(routeId: RouteId) => this.navigate(routeId)}
         .onSelectSession=${(sessionKey: string) => {
           context.gateway.setSessionKey(sessionKey);
@@ -743,6 +757,7 @@ class OpenClawShell extends LitElement {
           .routeId=${activeRoute}
           .basePath=${context.basePath}
           .agentLabel=${this.agentLabel}
+          .productName=${context.config.current.product.shortName}
           .overviewHref=${pathForRoute("overview", context.basePath)}
           .navDrawerOpen=${navDrawerOpen}
           .navCollapsed=${navCollapsed}
@@ -761,6 +776,8 @@ class OpenClawShell extends LitElement {
         <div class="shell-nav">
           <openclaw-app-sidebar
             .basePath=${context.basePath}
+            .productName=${context.config.current.product.name}
+            .productLogoPath=${context.config.current.product.logoPath}
             .activeRouteId=${activeRoute}
             .activePluginTabId=${activePluginTabId}
             .enabledRouteIds=${this.enabledRouteIds()}

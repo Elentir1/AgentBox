@@ -1,38 +1,36 @@
-# 🦞 OpenClaw — Personal AI Assistant
+# AlpenData AgentBox
 
 <p align="center">
-    <picture>
-        <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/openclaw/openclaw/main/docs/assets/openclaw-logo-text-dark.svg">
-        <img src="https://raw.githubusercontent.com/openclaw/openclaw/main/docs/assets/openclaw-logo-text.svg" alt="OpenClaw" width="500">
-    </picture>
+  <img src="ui/public/agentbox-logo.svg" alt="AlpenData AgentBox" width="500">
 </p>
 
 <p align="center">
-  <strong>EXFOLIATE! EXFOLIATE!</strong>
+  <strong>Your company knowledge, available through one secure assistant.</strong>
 </p>
 
 <p align="center">
-  <a href="https://github.com/openclaw/openclaw/actions/workflows/ci.yml?branch=main"><img src="https://img.shields.io/github/actions/workflow/status/openclaw/openclaw/ci.yml?branch=main&style=for-the-badge" alt="CI status"></a>
-  <a href="https://github.com/openclaw/openclaw/releases"><img src="https://img.shields.io/github/v/release/openclaw/openclaw?include_prereleases&style=for-the-badge" alt="GitHub release"></a>
-  <a href="https://discord.gg/clawd"><img src="https://img.shields.io/discord/1456350064065904867?label=Discord&logo=discord&logoColor=white&color=5865F2&style=for-the-badge" alt="Discord"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
 </p>
 
-**OpenClaw** is a _personal AI assistant_ you run on your own devices.
-It answers you on the channels you already use. It can speak and listen on macOS/iOS/Android, and can render a live Canvas you control. The Gateway is just the control plane — the product is the assistant.
+**AlpenData AgentBox** is a managed assistant for small and medium-sized businesses.
+Each customer receives an isolated deployment with its own storage, credentials,
+document index, backup policy, and audit trail.
 
-If you want a personal, single-user assistant that feels local, fast, and always-on, this is it.
+AgentBox connects to Google Drive, Microsoft 365, Nextcloud or kDrive, and local
+folders. Employees ask questions in a simplified interface and receive answers
+with traceable document sources.
 
-Supported channels include: WhatsApp, Telegram, Slack, Discord, Google Chat, Signal, iMessage, IRC, Microsoft Teams, Matrix, Feishu, LINE, Mattermost, Nextcloud Talk, Nostr, Synology Chat, Tlon, Twitch, Zalo, Zalo Personal, WeChat, QQ, WebChat.
+The product is powered internally by the OpenClaw runtime. Technical package,
+CLI, protocol, plugin, and state identifiers intentionally retain the
+`openclaw` name for upstream compatibility. OpenClaw's MIT copyright and
+third-party notices remain in [`LICENSE`](LICENSE) and
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
-[Website](https://openclaw.ai) · [Docs](https://docs.openclaw.ai) · [Vision](VISION.md) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [DeepWiki](https://deepwiki.com/openclaw/openclaw) · [Getting Started](https://docs.openclaw.ai/start/getting-started) · [Updating](https://docs.openclaw.ai/install/updating) · [Showcase](https://docs.openclaw.ai/start/showcase) · [FAQ](https://docs.openclaw.ai/help/faq) · [Onboarding](https://docs.openclaw.ai/start/wizard) · [Nix](https://github.com/openclaw/nix-openclaw) · [Docker](https://docs.openclaw.ai/install/docker) · [Discord](https://discord.gg/clawd)
+[AgentBox deployment](deploy/agentbox/README.md) · [Upstream technical documentation](https://docs.openclaw.ai) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
-New install? Start here: [Getting started](https://docs.openclaw.ai/start/getting-started)
-
-Preferred setup: run `openclaw onboard` in your terminal.
-OpenClaw Onboard guides you step by step through setting up the gateway, workspace, channels, and skills. It is the recommended CLI setup path and works on **macOS, Linux, and Windows**.
-Windows desktop users can start with the native [Windows Hub](https://docs.openclaw.ai/platforms/windows) companion app for setup, tray status, chat, node mode, and local MCP mode.
-Works with npm, pnpm, or bun.
+Operators provision customers from a validated manifest. Customers complete the
+remaining company, identity-provider, model, and document-source setup in the
+guided AgentBox onboarding flow.
 
 ## Sponsors
 

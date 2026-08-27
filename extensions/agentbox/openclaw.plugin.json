@@ -1,0 +1,90 @@
+{
+  "id": "agentbox",
+  "name": "AlpenData AgentBox",
+  "description": "Synchronize business documents from Microsoft 365, Google Drive, WebDAV, and local folders into an isolated RAGFlow dataset.",
+  "enabledByDefault": false,
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": ["agentbox_search", "agentbox_sync"]
+  },
+  "uiHints": {
+    "tenantId": {
+      "label": "Tenant ID",
+      "help": "Stable identifier for the isolated customer deployment."
+    },
+    "backend.baseUrl": {
+      "label": "RAGFlow Base URL",
+      "help": "Base URL of the tenant's isolated RAGFlow service."
+    },
+    "backend.datasetId": {
+      "label": "RAGFlow Dataset ID"
+    },
+    "backend.apiKeyEnv": {
+      "label": "RAGFlow API Key Environment Variable",
+      "sensitive": true
+    },
+    "backend.allowPrivateNetwork": {
+      "label": "Allow Private RAGFlow Network",
+      "help": "Required only when RAGFlow is reached over an isolated private network.",
+      "advanced": true
+    },
+    "sync.intervalMinutes": {
+      "label": "Synchronization Interval (minutes)"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["tenantId", "backend", "sources"],
+    "properties": {
+      "tenantId": {
+        "type": "string",
+        "minLength": 2
+      },
+      "backend": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["baseUrl", "datasetId", "apiKeyEnv"],
+        "properties": {
+          "baseUrl": { "type": "string" },
+          "datasetId": { "type": "string" },
+          "apiKeyEnv": { "type": "string" },
+          "allowPrivateNetwork": { "type": "boolean" }
+        }
+      },
+      "sync": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "intervalMinutes": { "type": "number", "minimum": 1, "maximum": 1440 },
+          "maxFileBytes": { "type": "number", "minimum": 1024 }
+        }
+      },
+      "sources": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": ["id", "type"],
+          "properties": {
+            "id": { "type": "string" },
+            "type": {
+              "type": "string",
+              "enum": ["google-drive", "local", "microsoft-365", "webdav"]
+            },
+            "root": { "type": "string" },
+            "driveId": { "type": "string" },
+            "baseUrl": { "type": "string" },
+            "rootPath": { "type": "string" },
+            "accessTokenEnv": { "type": "string" },
+            "usernameEnv": { "type": "string" },
+            "passwordEnv": { "type": "string" },
+            "allowPrivateNetwork": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -22,7 +22,7 @@ import {
   type ApplicationContext,
   type ApplicationNavigationOptions,
 } from "../app/context.ts";
-import { controlUiPublicAssetPath } from "../app/public-assets.ts";
+import { productAssetPath } from "../app/product-branding.ts";
 import "./theme-mode-toggle.ts";
 import "./tooltip.ts";
 import type { ThemeMode } from "../app/theme.ts";
@@ -130,6 +130,8 @@ class AppSidebar extends LitElement {
   }
 
   @property({ attribute: false }) basePath = "";
+  @property({ attribute: false }) productName = "AlpenData AgentBox";
+  @property({ attribute: false }) productLogoPath?: string;
   @property({ attribute: false }) activeRouteId?: NavigationRouteId;
   @property({ attribute: false }) activePluginTabId = "";
   @property({ attribute: false }) enabledRouteIds?: readonly NavigationRouteId[];
@@ -1617,8 +1619,8 @@ class AppSidebar extends LitElement {
              otherwise-empty native titlebar strip instead of a sidebar row. -->
         <img
           class="sidebar-native-brand"
-          src="${controlUiPublicAssetPath("favicon.svg", this.basePath)}"
-          alt="OpenClaw"
+          src="${productAssetPath(this.productLogoPath, "agentbox-favicon.svg", this.basePath)}"
+          alt=${this.productName}
         />
         <div class="sidebar-shell">
           <div class="sidebar-shell__body">

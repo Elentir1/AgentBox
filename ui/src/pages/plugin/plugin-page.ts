@@ -25,6 +25,13 @@ type BundledPluginTabView = {
 
 // Keyed by pluginId/tabId: tab ids are only unique within their plugin.
 const BUNDLED_TAB_VIEWS: Record<string, () => Promise<BundledPluginTabView>> = {
+  "agentbox/documents": async () => {
+    const [view, controller] = await Promise.all([
+      import("./agentbox-view.ts"),
+      import("./agentbox-controller.ts"),
+    ]);
+    return { render: view.renderAgentBox, stop: controller.stopAgentBoxPolling };
+  },
   "logbook/logbook": async () => {
     const [view, controller] = await Promise.all([
       import("./logbook-view.ts"),

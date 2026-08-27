@@ -12,6 +12,7 @@ class DashboardHeader extends LitElement {
   @property() basePath = "";
   @property() agentLabel = "";
   @property() overviewHref = "";
+  @property() productName = "AlpenData AgentBox";
 
   private readonly handleOverviewClick = (event: MouseEvent) => {
     if (
@@ -33,8 +34,9 @@ class DashboardHeader extends LitElement {
   override render() {
     const label = this.routeId ? titleForRoute(this.routeId) : "";
     const rawAgentLabel = this.agentLabel.trim();
-    // Skip the agent crumb when it repeats the brand crumb ("OpenClaw › OpenClaw › …").
-    const agentLabel = rawAgentLabel.toLowerCase() === "openclaw" ? "" : rawAgentLabel;
+    // Skip the agent crumb when it repeats the product crumb.
+    const agentLabel =
+      rawAgentLabel.toLowerCase() === this.productName.toLowerCase() ? "" : rawAgentLabel;
 
     return html`
       <div class="dashboard-header">
@@ -46,10 +48,10 @@ class DashboardHeader extends LitElement {
                   href=${this.overviewHref}
                   @click=${this.handleOverviewClick}
                 >
-                  OpenClaw
+                  ${this.productName}
                 </a>
               `
-            : html`<span class="dashboard-header__breadcrumb-link">OpenClaw</span>`}
+            : html`<span class="dashboard-header__breadcrumb-link">${this.productName}</span>`}
           ${agentLabel
             ? html`
                 <span class="dashboard-header__breadcrumb-segment">

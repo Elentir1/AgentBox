@@ -1,0 +1,15 @@
+<svg viewBox="0 0 360 96" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AlpenData AgentBox">
+  <defs>
+    <linearGradient id="agentbox-logo-gradient" x1="8" y1="82" x2="82" y2="8">
+      <stop offset="0" stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="88" height="88" rx="21" fill="#f8fafc"/>
+  <path d="M16 74 43 22l13 23 8-13 16 42H16Z" fill="url(#agentbox-logo-gradient)"/>
+  <path d="m33 57 10-18 7 12 5-7 10 30H24l9-17Z" fill="#fff" fill-opacity=".9"/>
+  <g fill="#0f172a" font-family="Inter,system-ui,sans-serif">
+    <text x="112" y="40" font-size="24" font-weight="600">AlpenData</text>
+    <text x="112" y="72" font-size="32" font-weight="750">AgentBox</text>
+  </g>
+</svg>

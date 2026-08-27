@@ -3,7 +3,7 @@ import { LitElement, html, nothing } from "lit";
 import { property } from "lit/decorators.js";
 import { ConnectErrorDetailCodes } from "../../../packages/gateway-protocol/src/connect-error-details.js";
 import { normalizeBasePath } from "../app-route-paths.ts";
-import { controlUiPublicAssetPath } from "../app/public-assets.ts";
+import { productAssetPath, type ProductBranding } from "../app/product-branding.ts";
 import { t } from "../i18n/index.ts";
 import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "../lib/external-link.ts";
 import {
@@ -37,6 +37,7 @@ export type LoginFailureFeedback = {
 
 export type LoginGateProps = {
   basePath: string;
+  product: ProductBranding;
   connected: boolean;
   lastError: string | null;
   lastErrorCode?: string | null;
@@ -293,7 +294,7 @@ function renderLoginFailure(feedback: LoginFailureFeedback) {
 
 function renderLoginGate(props: LoginGateProps) {
   const basePath = normalizeBasePath(props.basePath);
-  const faviconSrc = controlUiPublicAssetPath("favicon.svg", basePath);
+  const logoSrc = productAssetPath(props.product.logoPath, "agentbox-favicon.svg", basePath);
   const failure = resolveLoginFailureFeedback({
     connected: props.connected,
     lastError: props.lastError,
@@ -306,8 +307,8 @@ function renderLoginGate(props: LoginGateProps) {
     <div class="login-gate">
       <div class="login-gate__card">
         <div class="login-gate__header">
-          <img class="login-gate__logo" src=${faviconSrc} alt="OpenClaw" />
-          <div class="login-gate__title">OpenClaw</div>
+          <img class="login-gate__logo" src=${logoSrc} alt=${props.product.name} />
+          <div class="login-gate__title">${props.product.name}</div>
           <div class="login-gate__sub">${t("login.subtitle")}</div>
         </div>
         <div class="login-gate__form">
