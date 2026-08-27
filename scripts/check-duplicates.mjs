@@ -9,6 +9,7 @@ const jscpdBin = path.join(repoRoot, "node_modules", "jscpd", "bin", "jscpd");
 
 const targets = [
   "src",
+  "deploy",
   "extensions",
   "examples",
   "scripts",
