@@ -2,7 +2,7 @@ import {
   DEFAULT_CONTROL_UI_PRODUCT_BRANDING,
   type ControlUiProductBranding,
 } from "../../../src/gateway/control-ui-contract.js";
-import { controlUiPublicAssetPath } from "./public-assets.ts";
+import { controlUiPublicAssetPath, type ControlUiPublicAsset } from "./public-assets.ts";
 
 export type ProductBranding = ControlUiProductBranding;
 
@@ -64,7 +64,7 @@ export function applyProductBranding(branding: ProductBranding): void {
 
 export function productAssetPath(
   configuredPath: string | undefined,
-  fallbackAsset: string,
+  fallbackAsset: ControlUiPublicAsset,
   basePath: string,
 ): string {
   return configuredPath ?? controlUiPublicAssetPath(fallbackAsset, basePath);

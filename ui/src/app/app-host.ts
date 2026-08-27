@@ -524,12 +524,13 @@ class OpenClawShell extends LitElement {
     if (!context || !isRouteId(routeId)) {
       return;
     }
-    if (!isRouteEnabledForShell(routeId, this.enabledRouteIds())) {
-      routeId = "chat";
-      options = this.chatNavigationOptions();
-    }
+    const destination = isRouteEnabledForShell(routeId, this.enabledRouteIds()) ? routeId : "chat";
+    const destinationOptions = destination === routeId ? options : this.chatNavigationOptions();
     this.closeNavDrawer({ restoreFocus: true });
-    context.navigate(routeId, routeId === "chat" ? this.chatNavigationOptions(options) : options);
+    context.navigate(
+      destination,
+      destination === "chat" ? this.chatNavigationOptions(destinationOptions) : destinationOptions,
+    );
   }
 
   private replaceChatWithCurrentSession() {
