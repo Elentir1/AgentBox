@@ -490,9 +490,11 @@ function createWebDavAdapter(
     allowPrivateNetwork: source.allowPrivateNetwork,
   };
   const request = async (url: string, init: RequestInit) => {
+    const headers = new Headers(init.headers);
+    headers.set("Authorization", authorization);
     const result = await fetchWithSsrFGuard({
       url,
-      init: { ...init, headers: { Authorization: authorization, ...init.headers } },
+      init: { ...init, headers },
       timeoutMs: 60_000,
       policy,
       auditContext: `agentbox.webdav.${source.id}`,
@@ -586,4 +588,5 @@ export function createSourceAdapter(source: AgentBoxSourceConfig): AgentBoxSourc
     case "webdav":
       return createWebDavAdapter(source);
   }
+  throw new Error("Unsupported AgentBox source type.");
 }

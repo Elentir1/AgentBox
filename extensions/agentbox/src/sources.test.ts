@@ -6,6 +6,10 @@ import { createSourceAdapter, parseWebDavMultiStatus } from "./sources.js";
 
 const temporaryDirectories: string[] = [];
 
+function requestUrl(input: string | URL | Request): string {
+  return typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+}
+
 afterEach(async () => {
   vi.unstubAllGlobals();
   delete process.env.AGENTBOX_GRAPH_TOKEN;
@@ -38,7 +42,7 @@ describe("AgentBox document sources", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
-        const url = String(input);
+        const url = requestUrl(input);
         requests.push({
           url,
           authorization: new Headers(init?.headers).get("authorization") ?? undefined,
@@ -87,7 +91,7 @@ describe("AgentBox document sources", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string | URL | Request) => {
-        const url = String(input);
+        const url = requestUrl(input);
         if (url.includes("startPageToken")) {
           return Response.json({ startPageToken: "cursor-2" });
         }

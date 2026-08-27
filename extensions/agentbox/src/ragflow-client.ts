@@ -59,14 +59,13 @@ export class RagFlowClient {
   }
 
   private async request(pathname: string, init: RequestInit): Promise<unknown> {
+    const headers = new Headers(init.headers);
+    headers.set("Authorization", `Bearer ${this.apiKey}`);
     const { response, release } = await fetchWithSsrFGuard({
       url: this.endpoint(pathname),
       init: {
         ...init,
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          ...init.headers,
-        },
+        headers,
       },
       timeoutMs: 120_000,
       policy: this.policy,
