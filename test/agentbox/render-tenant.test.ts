@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { normalizeTenantManifest, renderTenantArtifacts } from "./render-tenant.mjs";
+import {
+  normalizeTenantManifest,
+  renderTenantArtifacts,
+} from "../../deploy/agentbox/render-tenant.mjs";
 
 function createManifest() {
   return {

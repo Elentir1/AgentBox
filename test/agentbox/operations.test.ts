@@ -3,8 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import * as tar from "tar";
 import { afterEach, describe, expect, it } from "vitest";
-import { destroyTenant } from "./destroy-tenant.mjs";
-import { restoreTenantBackup } from "./restore-tenant.mjs";
+import { destroyTenant } from "../../deploy/agentbox/destroy-tenant.mjs";
+import { restoreTenantBackup } from "../../deploy/agentbox/restore-tenant.mjs";
 
 const temporaryDirectories: string[] = [];
 
