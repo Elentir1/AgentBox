@@ -37,7 +37,7 @@ describe("AgentBox product branding", () => {
 
     expect(document.title).toBe("AlpenData AgentBox");
     expect(document.documentElement.dataset.productName).toBe("AlpenData AgentBox");
-    expect(document.querySelector<HTMLLinkElement>('link[rel~="icon"]')?.pathname).toBe(
+    expect(document.querySelector<HTMLLinkElement>('link[rel~="icon"]')?.getAttribute("href")).toBe(
       "/agentbox-favicon.svg",
     );
   });
