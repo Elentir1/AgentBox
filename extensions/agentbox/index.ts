@@ -10,6 +10,13 @@ import { AgentBoxService } from "./src/service.js";
 import { createAgentBoxStateStore } from "./src/state.js";
 import { createAgentBoxSearchTool, createAgentBoxSyncTool } from "./src/tools.js";
 
+function resolveSearchActor(client: GatewayRequestHandlerOptions["client"]): string {
+  const display = client?.connect?.client?.displayName?.trim();
+  const id = client?.connect?.client?.id?.trim();
+  const ip = client?.clientIp?.trim();
+  return `${display || id || "unknown-client"}@${ip || "unknown-ip"}`;
+}
+
 export default definePluginEntry({
   id: "agentbox",
   name: "AlpenData AgentBox",
@@ -48,6 +55,19 @@ export default definePluginEntry({
             "Use HTTPS, or verify that the backend is reachable only on an isolated tenant network.",
         });
       }
+      if (
+        config.backend.datasetId !== config.tenantId &&
+        !config.backend.datasetId.startsWith(`${config.tenantId}-`)
+      ) {
+        findings.push({
+          checkId: "agentbox.backend.dataset",
+          severity: "critical",
+          title: "AgentBox RAGFlow dataset is not tenant-scoped",
+          detail: `Dataset ${config.backend.datasetId} is not scoped to tenant ${config.tenantId}.`,
+          remediation:
+            "Give each customer a dedicated RAGFlow dataset whose id starts with the tenant id.",
+        });
+      }
       for (const source of config.sources) {
         if (source.type === "webdav" && source.allowPrivateNetwork) {
           findings.push({
@@ -69,13 +89,13 @@ export default definePluginEntry({
       return service;
     };
     const handle =
-      (run: (params: unknown) => unknown) =>
-      async ({ params, respond }: GatewayRequestHandlerOptions) => {
+      (run: (options: GatewayRequestHandlerOptions) => unknown) =>
+      async (options: GatewayRequestHandlerOptions) => {
         try {
-          respond(true, await run(params));
+          options.respond(true, await run(options));
         } catch (error) {
           const message = formatErrorMessage(error);
-          respond(false, { error: message }, errorShape(ErrorCodes.UNAVAILABLE, message));
+          options.respond(false, { error: message }, errorShape(ErrorCodes.UNAVAILABLE, message));
         }
       };
 
@@ -103,18 +123,29 @@ export default definePluginEntry({
     );
     api.registerGatewayMethod(
       "agentbox.search",
-      handle((params) => {
-        const query = (params as { query?: unknown } | undefined)?.query;
-        const limit = (params as { limit?: unknown } | undefined)?.limit;
+      handle(({ params, client }) => {
+        const query = params.query;
+        const limit = params.limit;
         if (typeof query !== "string" || !query.trim()) {
           throw new Error("query must be a non-empty string.");
         }
         return requireService().search(
           query,
           typeof limit === "number" && Number.isInteger(limit) ? limit : undefined,
+          resolveSearchActor(client),
         );
       }),
       { scope: "operator.read" },
+    );
+    api.registerGatewayMethod(
+      "agentbox.audit",
+      handle(({ params }) => {
+        const limit = params.limit;
+        return requireService().audit(
+          typeof limit === "number" && Number.isInteger(limit) ? limit : undefined,
+        );
+      }),
+      { scope: "operator.admin" },
     );
 
     api.registerTool(

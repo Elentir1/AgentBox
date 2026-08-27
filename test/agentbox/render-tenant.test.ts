@@ -80,10 +80,42 @@ describe("AgentBox tenant renderer", () => {
   it("rejects shared or unsafe deployment inputs", () => {
     const rootManifest = createManifest();
     rootManifest.spec.hostRoot = "/";
-    expect(() => normalizeTenantManifest(rootManifest)).toThrow("tenant-specific");
+    expect(() => normalizeTenantManifest(rootManifest)).toThrow("tenant id");
+
+    const sharedRoot = createManifest();
+    sharedRoot.spec.hostRoot = "/var/lib/agentbox/shared";
+    expect(() => normalizeTenantManifest(sharedRoot)).toThrow("tenant id");
+
+    const foreignDataset = createManifest();
+    foreignDataset.spec.documents.backend.datasetId = "other-company";
+    expect(() => normalizeTenantManifest(foreignDataset)).toThrow("tenant id");
 
     const insecureWebDav = createManifest();
     insecureWebDav.spec.documents.sources[2].baseUrl = "http://cloud.example.test";
     expect(() => normalizeTenantManifest(insecureWebDav)).toThrow("HTTPS");
+
+    const proxyWithoutAllowlist = createManifest();
+    proxyWithoutAllowlist.spec.identity = {
+      mode: "trusted-proxy",
+      userHeader: "x-forwarded-user",
+    };
+    expect(() => normalizeTenantManifest(proxyWithoutAllowlist)).toThrow("trustedProxies");
+  });
+
+  it("keeps two customer manifests on disjoint storage identities", () => {
+    const acme = renderTenantArtifacts(createManifest());
+    const second = createManifest();
+    second.metadata.id = "contoso";
+    second.metadata.displayName = "Contoso SA";
+    second.spec.hostRoot = "/var/lib/agentbox/contoso";
+    second.spec.documents.backend.datasetId = "contoso-internal";
+    const contoso = renderTenantArtifacts(second);
+
+    expect(acme.files["docker-compose.override.yml"]).toContain("name: agentbox-acme");
+    expect(contoso.files["docker-compose.override.yml"]).toContain("name: agentbox-contoso");
+    expect(acme.tenant.hostRoot).not.toBe(contoso.tenant.hostRoot);
+    expect(acme.tenant.documents.backend.datasetId).not.toBe(
+      contoso.tenant.documents.backend.datasetId,
+    );
   });
 });

@@ -88,10 +88,23 @@ retrieval through `agentbox_search`.
 The MVP authorizes one document corpus as a group. Every employee allowed by
 the trusted proxy can search every document indexed for that AgentBox.
 
+Search still fails closed at the instance boundary. Retrieval is limited to
+the tenant's RAGFlow dataset, then filtered to document IDs this AgentBox has
+indexed. Chunks from another customer are dropped and recorded in the audit
+log.
+
 Source-level or per-document ACL synchronization is not yet an enforcement
 boundary. If two employee groups must not see the same documents, provision
 separate AgentBox deployments or separate corpora with independently enforced
 access. Do not import restricted documents into a shared corpus.
+
+## Audit
+
+Each AgentBox keeps a 90-day SQLite audit trail of document searches and
+synchronization runs. Search entries store the actor, a SHA-256 query digest,
+a short query preview, authorized document IDs, and the number of dropped
+foreign chunks. Administrators can read the trail through `agentbox.audit`.
+The trail does not store document bodies or source credentials.
 
 ## Operations
 
@@ -103,6 +116,8 @@ The deployment toolkit provides:
 - verified backups with retention
 - confirmed restore with rollback on failure
 - confirmed tenant destruction for customer offboarding
+- tenant-scoped host directories and RAGFlow dataset ids
+- document-search audit with foreign-chunk drop counts
 
 Run storage on encrypted volumes, terminate TLS at the customer origin, encrypt
 backup storage, and restrict private RAGFlow and WebDAV egress to tenant-owned
@@ -125,5 +140,7 @@ customer's actual APIs and representative data:
 - legal review of the MIT notices, product trademark, privacy terms, and Swiss
   FADP or applicable GDPR obligations
 
-Mock contract tests prove the integration logic, not third-party credentials,
-consent, quotas, or production isolation.
+Contract tests cover source adapters, tenant-scoped rendering, restore and
+deletion safeguards, citation formatting, known-answer fixture retrieval, and
+cross-tenant document-id filtering. They do not replace live OAuth consent,
+provider quotas, RAGFlow OCR, or production isolation drills.

@@ -100,19 +100,26 @@ export function normalizeTenantManifest(input) {
     throw new Error("metadata.id must be a lowercase DNS-safe identifier.");
   }
   const hostRoot = path.resolve(requireString(spec.hostRoot, "spec.hostRoot"));
-  if (!path.isAbsolute(spec.hostRoot) || hostRoot === "/") {
-    throw new Error("spec.hostRoot must be an absolute tenant-specific directory.");
+  // Destroy/restore refuse paths that do not contain the tenant id; keep render
+  // aligned so one customer cannot be provisioned onto another customer's root.
+  if (
+    !path.isAbsolute(spec.hostRoot) ||
+    hostRoot === "/" ||
+    hostRoot === path.parse(hostRoot).root ||
+    !hostRoot.split(path.sep).includes(id)
+  ) {
+    throw new Error("spec.hostRoot must be an absolute directory that contains the tenant id.");
   }
   const provider = requireRecord(spec.provider, "spec.provider");
   const documents = requireRecord(spec.documents, "spec.documents");
   const backend = requireRecord(documents.backend, "spec.documents.backend");
   const identity = requireRecord(spec.identity ?? { mode: "token" }, "spec.identity");
   const identityMode = identity.mode === "trusted-proxy" ? "trusted-proxy" : "token";
-  if (
-    identityMode === "trusted-proxy" &&
-    !requireString(identity.userHeader, "identity.userHeader")
-  ) {
-    throw new Error("identity.userHeader is required for trusted-proxy mode.");
+  if (identityMode === "trusted-proxy") {
+    requireString(identity.userHeader, "identity.userHeader");
+    if (!Array.isArray(identity.trustedProxies) || identity.trustedProxies.length === 0) {
+      throw new Error("identity.trustedProxies is required for trusted-proxy mode.");
+    }
   }
   const sources = Array.isArray(documents.sources) ? documents.sources.map(normalizeSource) : [];
   if (sources.length === 0 || new Set(sources.map((source) => source.id)).size !== sources.length) {
@@ -123,6 +130,10 @@ export function normalizeTenantManifest(input) {
     throw new Error("spec.gatewayPort must be an integer between 1024 and 65535.");
   }
   const backendBaseUrl = requireHttpUrl(backend.baseUrl, "spec.documents.backend.baseUrl");
+  const datasetId = requireString(backend.datasetId, "spec.documents.backend.datasetId");
+  if (datasetId !== id && !datasetId.startsWith(`${id}-`)) {
+    throw new Error("spec.documents.backend.datasetId must be scoped to the tenant id.");
+  }
   const backendAllowsPrivateNetwork = backend.allowPrivateNetwork === true;
   if (backendBaseUrl.startsWith("http://") && !backendAllowsPrivateNetwork) {
     throw new Error(
@@ -172,7 +183,7 @@ export function normalizeTenantManifest(input) {
     documents: {
       backend: {
         baseUrl: backendBaseUrl,
-        datasetId: requireString(backend.datasetId, "spec.documents.backend.datasetId"),
+        datasetId,
         apiKeyEnv: requireEnvName(backend.apiKeyEnv, "spec.documents.backend.apiKeyEnv"),
         allowPrivateNetwork: backendAllowsPrivateNetwork,
       },

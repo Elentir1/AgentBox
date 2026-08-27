@@ -108,4 +108,28 @@ describeControlUiE2e("AgentBox employee experience", () => {
       await context.close();
     }
   });
+
+  it("keeps the operator console for administrators", async () => {
+    const context = await browser.newContext({
+      locale: "en-US",
+      serviceWorkers: "block",
+      viewport: { height: 900, width: 1440 },
+    });
+    const page = await context.newPage();
+    await installMockGateway(page, {
+      product: { name: "AlpenData AgentBox", shortName: "AgentBox" },
+      shellProfile: "auto",
+      scopes: ["operator.read", "operator.write", "operator.admin"],
+      featureMethods: ["chat.metadata", "chat.startup"],
+    });
+
+    try {
+      await page.goto(`${server.baseUrl}overview`);
+      await expect.poll(() => page.title()).toBe("AlpenData AgentBox");
+      const sidebar = page.locator("openclaw-app-sidebar");
+      await expect.poll(() => sidebar.getByRole("link", { name: "Settings" }).count()).toBe(1);
+    } finally {
+      await context.close();
+    }
+  });
 });

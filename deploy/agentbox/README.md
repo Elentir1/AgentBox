@@ -33,8 +33,10 @@ The renderer writes:
 - `openclaw.batch.json`: validated post-onboarding configuration operations
 - `runtime.env.example`: names of required secrets, without values
 
-The renderer rejects a root host directory, insecure WebDAV, credential-bearing
-URLs, invalid environment-variable names, duplicate source IDs, and public HTTP
+The renderer rejects a root host directory, a host root that does not contain
+the tenant id, a RAGFlow dataset that is not scoped to the tenant id, insecure
+WebDAV, credential-bearing URLs, invalid environment-variable names, duplicate
+source IDs, trusted-proxy mode without proxy allowlisting, and public HTTP
 origins. A private HTTP RAGFlow endpoint requires the explicit
 `allowPrivateNetwork: true` acknowledgement.
 
@@ -128,7 +130,9 @@ and identity-provider assignments have separate owners and must also be removed.
 
 All users authorized to one AgentBox share its corpus in this MVP. Use separate
 deployments for document groups requiring different access. Per-document source
-ACL synchronization is not implemented.
+ACL synchronization is not implemented. Search still drops retrieval chunks
+whose document IDs were not indexed by this AgentBox, and administrators can
+inspect that activity through `agentbox.audit`.
 
 ## Required proof
 

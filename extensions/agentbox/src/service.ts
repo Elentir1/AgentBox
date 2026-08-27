@@ -1,7 +1,7 @@
 import type { AgentBoxConfig } from "./config.js";
 import { RagFlowClient, type AgentBoxSearchResult } from "./ragflow-client.js";
 import { createSourceAdapter, type AgentBoxDocument } from "./sources.js";
-import type { AgentBoxDocumentState, AgentBoxStateStore } from "./state.js";
+import { digestSearchQuery, type AgentBoxDocumentState, type AgentBoxStateStore } from "./state.js";
 
 type AgentBoxLogger = {
   info: (message: string) => void;
@@ -93,8 +93,37 @@ export class AgentBoxService {
     };
   }
 
-  async search(question: string, limit?: number): Promise<AgentBoxSearchResult[]> {
-    return await this.client.search(question, limit);
+  async search(
+    question: string,
+    limit?: number,
+    actor = "agent-tool",
+  ): Promise<AgentBoxSearchResult[]> {
+    const raw = await this.client.search(question, limit);
+    // Retrieval is bound to this instance's indexed document IDs. RAGFlow dataset
+    // isolation is the primary boundary; this filter fails closed if a foreign
+    // chunk leaks through the shared retrieval API.
+    const authorized = await this.state.authorizedDocumentIds();
+    const allowed = raw.filter((result) => authorized.has(result.documentId));
+    const droppedCount = raw.length - allowed.length;
+    if (droppedCount > 0) {
+      this.logger.warn(`AgentBox dropped ${droppedCount} unauthorized retrieval chunks.`);
+    }
+    await this.state.appendAudit({
+      kind: "audit",
+      at: new Date().toISOString(),
+      action: "search",
+      actor,
+      tenantId: this.config.tenantId,
+      ...digestSearchQuery(question),
+      resultCount: allowed.length,
+      droppedCount,
+      documentIds: allowed.map((result) => result.documentId),
+    });
+    return allowed;
+  }
+
+  async audit(limit?: number) {
+    return await this.state.listAudit(limit);
   }
 
   runOnce(): Promise<AgentBoxStatus> {
@@ -145,7 +174,17 @@ export class AgentBoxService {
       }
     }
     this.lastSyncCompletedAt = new Date().toISOString();
-    return this.status();
+    const status = this.status();
+    await this.state.appendAudit({
+      kind: "audit",
+      at: this.lastSyncCompletedAt,
+      action: "sync",
+      actor: "scheduler",
+      tenantId: this.config.tenantId,
+      uploaded: status.sources.reduce((sum, source) => sum + source.uploaded, 0),
+      deleted: status.sources.reduce((sum, source) => sum + source.deleted, 0),
+    });
+    return status;
   }
 
   private async syncSource(sourceId: string, status: AgentBoxSourceStatus): Promise<void> {
