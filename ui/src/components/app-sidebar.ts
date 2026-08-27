@@ -132,6 +132,7 @@ class AppSidebar extends LitElement {
   @property({ attribute: false }) basePath = "";
   @property({ attribute: false }) productName = "AlpenData AgentBox";
   @property({ attribute: false }) productLogoPath?: string;
+  @property({ attribute: false }) productDocsUrl = "https://www.alpendata.ch/agentbox/docs";
   @property({ attribute: false }) activeRouteId?: NavigationRouteId;
   @property({ attribute: false }) activePluginTabId = "";
   @property({ attribute: false }) enabledRouteIds?: readonly NavigationRouteId[];
@@ -1647,34 +1648,41 @@ class AppSidebar extends LitElement {
                 ></span>
               </openclaw-tooltip>
               <span class="sidebar-footer-bar__spacer"></span>
-              <openclaw-tooltip .content=${titleForRoute("config")}>
-                <a
-                  href=${pathForRoute("config", this.basePath)}
-                  class="sidebar-footer-icon ${settingsActive ? "sidebar-footer-icon--active" : ""}"
-                  aria-label=${titleForRoute("config")}
-                  aria-current=${settingsActive ? "page" : nothing}
-                  @focus=${(event: Event) => this.preloadRoute("config", event)}
-                  @blur=${this.cancelPreload}
-                  @pointerenter=${(event: Event) => this.preloadRoute("config", event)}
-                  @pointerleave=${this.cancelPreload}
-                  @touchstart=${(event: TouchEvent) => this.preloadRoute("config", event, true)}
-                  @click=${(event: MouseEvent) => {
-                    if (!shouldHandleNavigationClick(event)) {
-                      return;
-                    }
-                    event.preventDefault();
-                    this.onNavigate?.("config");
-                  }}
-                >
-                  ${icons.settings}
-                </a>
-              </openclaw-tooltip>
+              ${this.isRouteEnabled("config")
+                ? html`
+                    <openclaw-tooltip .content=${titleForRoute("config")}>
+                      <a
+                        href=${pathForRoute("config", this.basePath)}
+                        class="sidebar-footer-icon ${settingsActive
+                          ? "sidebar-footer-icon--active"
+                          : ""}"
+                        aria-label=${titleForRoute("config")}
+                        aria-current=${settingsActive ? "page" : nothing}
+                        @focus=${(event: Event) => this.preloadRoute("config", event)}
+                        @blur=${this.cancelPreload}
+                        @pointerenter=${(event: Event) => this.preloadRoute("config", event)}
+                        @pointerleave=${this.cancelPreload}
+                        @touchstart=${(event: TouchEvent) =>
+                          this.preloadRoute("config", event, true)}
+                        @click=${(event: MouseEvent) => {
+                          if (!shouldHandleNavigationClick(event)) {
+                            return;
+                          }
+                          event.preventDefault();
+                          this.onNavigate?.("config");
+                        }}
+                      >
+                        ${icons.settings}
+                      </a>
+                    </openclaw-tooltip>
+                  `
+                : nothing}
               <openclaw-tooltip
                 .content=${t("chat.docsOpensInNewTab", { label: t("common.docs") })}
               >
                 <a
                   class="sidebar-footer-icon"
-                  href="https://docs.openclaw.ai"
+                  href=${this.productDocsUrl}
                   target=${EXTERNAL_LINK_TARGET}
                   rel=${buildExternalLinkRel()}
                   aria-label=${t("common.docs")}

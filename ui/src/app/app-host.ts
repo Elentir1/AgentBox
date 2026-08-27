@@ -778,6 +778,8 @@ class OpenClawShell extends LitElement {
             .basePath=${context.basePath}
             .productName=${context.config.current.product.name}
             .productLogoPath=${context.config.current.product.logoPath}
+            .productDocsUrl=${context.config.current.product.docsUrl ??
+            "https://www.alpendata.ch/agentbox/docs"}
             .activeRouteId=${activeRoute}
             .activePluginTabId=${activePluginTabId}
             .enabledRouteIds=${this.enabledRouteIds()}
