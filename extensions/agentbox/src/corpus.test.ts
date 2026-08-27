@@ -4,7 +4,6 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentBoxConfig } from "./config.js";
 import { AgentBoxService } from "./service.js";
-import { createSourceAdapter } from "./sources.js";
 import type { AgentBoxAuditEvent, AgentBoxDocumentState, AgentBoxStateStore } from "./state.js";
 
 const temporaryDirectories: string[] = [];
@@ -87,7 +86,6 @@ describe("AgentBox commercial corpus isolation", () => {
       acmeStore,
       { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
       {
-        createAdapter,
         client: {
           upload: async ({ filename }) => {
             const documentId = `doc-${filename}`;
