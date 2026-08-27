@@ -267,6 +267,7 @@ export function renderTenantArtifacts(input) {
       : []),
     { path: "gateway.controlUi", value: controlUi },
     { path: "gateway.terminal.enabled", value: false },
+    { path: "ui.seamColor", value: "#0F766E" },
     { path: "plugins.entries.agentbox", value: pluginEntry },
   ];
   const secretNames = new Set([

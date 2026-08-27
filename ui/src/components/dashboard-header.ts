@@ -35,8 +35,11 @@ class DashboardHeader extends LitElement {
     const label = this.routeId ? titleForRoute(this.routeId) : "";
     const rawAgentLabel = this.agentLabel.trim();
     // Skip the agent crumb when it repeats the product crumb.
+    const normalizedAgentLabel = rawAgentLabel.toLowerCase();
     const agentLabel =
-      rawAgentLabel.toLowerCase() === this.productName.toLowerCase() ? "" : rawAgentLabel;
+      normalizedAgentLabel === this.productName.toLowerCase() || normalizedAgentLabel === "openclaw"
+        ? ""
+        : rawAgentLabel;
 
     return html`
       <div class="dashboard-header">

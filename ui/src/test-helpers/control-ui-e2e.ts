@@ -261,6 +261,7 @@ export function createControlUiMockBootstrapConfig(scenario: ControlUiMockGatewa
     embedSandbox: "scripts",
     localMediaPreviewRoots: [],
     product: normalizedScenario.product,
+    seamColor: "#0F766E",
     serverVersion: "e2e",
     shellProfile: normalizedScenario.shellProfile,
     terminalEnabled: normalizedScenario.terminalEnabled,
