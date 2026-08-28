@@ -1440,7 +1440,7 @@ export const en: TranslationMap = {
     },
   },
   login: {
-    subtitle: "Gateway Dashboard",
+    subtitle: "Your company documents, one assistant",
     passwordPlaceholder: "optional",
     showToken: "Show token",
     hideToken: "Hide token",

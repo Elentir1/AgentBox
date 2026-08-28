@@ -292,10 +292,18 @@ function renderLoginFailure(feedback: LoginFailureFeedback) {
   `;
 }
 
+function alpenDataLoginTitle(product: ProductBranding): { wordmark: boolean; title: string } {
+  if (!/^AlpenData\b/i.test(product.name)) {
+    return { wordmark: false, title: product.name };
+  }
+  const rest = product.name.replace(/^AlpenData\s*/i, "").trim();
+  return { wordmark: true, title: rest || product.shortName };
+}
+
 function renderLoginGate(props: LoginGateProps) {
   const basePath = normalizeBasePath(props.basePath);
   const logoSrc = productAssetPath(undefined, "alpendata-mark.png", basePath);
-  const showAlpenDataWordmark = /^AlpenData\b/i.test(props.product.name);
+  const brand = alpenDataLoginTitle(props.product);
   const failure = resolveLoginFailureFeedback({
     connected: props.connected,
     lastError: props.lastError,
@@ -309,14 +317,12 @@ function renderLoginGate(props: LoginGateProps) {
       <div class="login-gate__card">
         <div class="login-gate__header">
           <img class="login-gate__logo" src=${logoSrc} alt="" />
-          ${showAlpenDataWordmark
+          ${brand.wordmark
             ? html`<div class="login-gate__wordmark" aria-label=${props.product.name}>
                 <span>Alpen</span><span class="login-gate__data">Data</span>
               </div>`
             : nothing}
-          <div class="login-gate__title">
-            ${showAlpenDataWordmark ? props.product.shortName : props.product.name}
-          </div>
+          <div class="login-gate__title">${brand.title}</div>
           <div class="login-gate__sub">${t("login.subtitle")}</div>
         </div>
         <div class="login-gate__form">
