@@ -26,6 +26,8 @@ export type ControlUiProductBranding = {
 export const DEFAULT_CONTROL_UI_PRODUCT_BRANDING: ControlUiProductBranding = {
   name: "AlpenData AgentBox",
   shortName: "AgentBox",
+  logoPath: "/agentbox-logo.svg",
+  faviconPath: "/agentbox-favicon.svg",
   docsUrl: "https://www.alpendata.ch/agentbox/docs",
   supportUrl: "https://www.alpendata.ch/contact",
   privacyUrl: "https://www.alpendata.ch/privacy",

@@ -166,6 +166,9 @@ const STATIC_ASSET_EXTENSIONS = new Set([
 
 const CONTROL_UI_NAMESPACE_PREFIX = "/__openclaw__/";
 const CONTROL_UI_ROOT_PUBLIC_ASSETS = new Set([
+  "agentbox-favicon.ico",
+  "agentbox-favicon.svg",
+  "alpendata-mark.png",
   "apple-touch-icon.png",
   "favicon-32.png",
   "favicon.ico",

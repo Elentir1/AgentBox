@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light" data-theme-mode="light">
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -7,8 +7,10 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
     />
     <title>AlpenData AgentBox</title>
-    <meta name="color-scheme" content="dark light" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#dc2626" />
     <link rel="icon" type="image/svg+xml" href="/agentbox-favicon.svg" />
+    <link rel="alternate icon" href="/agentbox-favicon.ico" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <script>
       (function () {
@@ -39,9 +41,9 @@
           if (typeof m !== "string") m = "";
           var legacy = LEGACY[t];
           var theme = THEMES[t] ? t : legacy ? legacy.split(":")[0] : "claw";
-          var mode = MODES[m] ? m : legacy ? legacy.split(":")[1] : "system";
+          var mode = MODES[m] ? m : legacy ? legacy.split(":")[1] : "light";
           if (mode === "system") {
-            mode = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+            mode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
           }
           var resolved =
             theme === "knot"
@@ -67,8 +69,8 @@
       body.openclaw-mount-fallback-active {
         margin: 0;
         min-width: 320px;
-        color: #eef4f8;
-        background: #101418;
+        color: #0f172a;
+        background: #ffffff;
         font-family:
           Inter,
           ui-sans-serif,
@@ -97,16 +99,16 @@
       .mount-fallback__panel {
         box-sizing: border-box;
         width: min(100%, 640px);
-        border: 1px solid rgba(148, 163, 184, 0.28);
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
-        background: #151b21;
-        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+        background: #ffffff;
+        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
         padding: 28px;
       }
 
       .mount-fallback__eyebrow {
         margin: 0 0 10px;
-        color: #9fb0bd;
+        color: #dc2626;
         font-size: 0.78rem;
         font-weight: 700;
         letter-spacing: 0.08em;
@@ -122,7 +124,7 @@
 
       .mount-fallback__panel p {
         margin: 16px 0 0;
-        color: #c8d3da;
+        color: #64748b;
         font-size: 1rem;
         line-height: 1.6;
       }
@@ -130,12 +132,12 @@
       .mount-fallback__panel ul {
         margin: 18px 0 0;
         padding-left: 1.2rem;
-        color: #c8d3da;
+        color: #64748b;
         line-height: 1.6;
       }
 
       .mount-fallback__panel a {
-        color: #8bd3ff;
+        color: #dc2626;
         text-decoration-thickness: 0.08em;
         text-underline-offset: 0.18em;
       }
@@ -160,9 +162,9 @@
       }
 
       .mount-fallback__button--primary {
-        border-color: #66c2ff;
-        color: #061019;
-        background: #8bd3ff;
+        border-color: #dc2626;
+        color: #ffffff;
+        background: #dc2626;
       }
 
       .mount-fallback__panel:focus {
@@ -171,29 +173,56 @@
 
       .mount-fallback__button:focus-visible,
       .mount-fallback__panel a:focus-visible {
-        outline: 3px solid #f9c74f;
+        outline: 3px solid #dc2626;
         outline-offset: 3px;
       }
 
       html[data-theme-mode="light"] body.openclaw-mount-fallback-active {
-        color: #151b21;
-        background: #f5f7fa;
+        color: #0f172a;
+        background: #ffffff;
       }
 
       html[data-theme-mode="light"] .mount-fallback__panel {
-        border-color: rgba(71, 85, 105, 0.22);
+        border-color: #e2e8f0;
         background: #ffffff;
-        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.14);
+        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
       }
 
-      html[data-theme-mode="light"] .mount-fallback__eyebrow,
+      html[data-theme-mode="light"] .mount-fallback__eyebrow {
+        color: #dc2626;
+      }
+
       html[data-theme-mode="light"] .mount-fallback__panel p,
       html[data-theme-mode="light"] .mount-fallback__panel ul {
-        color: #4b5963;
+        color: #64748b;
       }
 
       html[data-theme-mode="light"] .mount-fallback__panel a {
-        color: #0369a1;
+        color: #dc2626;
+      }
+
+      html[data-theme-mode="dark"] body.openclaw-mount-fallback-active {
+        color: #f8fafc;
+        background: #0f172a;
+      }
+
+      html[data-theme-mode="dark"] .mount-fallback__panel {
+        border-color: #334155;
+        background: #1b2b4b;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+      }
+
+      html[data-theme-mode="dark"] .mount-fallback__eyebrow {
+        color: #dc2626;
+      }
+
+      html[data-theme-mode="dark"] .mount-fallback__panel p,
+      html[data-theme-mode="dark"] .mount-fallback__panel ul {
+        color: #94a3b8;
+      }
+
+      html[data-theme-mode="dark"] .mount-fallback__panel a {
+        color: #fca5a5;
       }
     </style>
   </head>

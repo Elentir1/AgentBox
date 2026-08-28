@@ -131,7 +131,6 @@ class AppSidebar extends LitElement {
 
   @property({ attribute: false }) basePath = "";
   @property({ attribute: false }) productName = "AlpenData AgentBox";
-  @property({ attribute: false }) productLogoPath?: string;
   @property({ attribute: false }) productDocsUrl = "https://www.alpendata.ch/agentbox/docs";
   @property({ attribute: false }) activeRouteId?: NavigationRouteId;
   @property({ attribute: false }) activePluginTabId = "";
@@ -1620,7 +1619,7 @@ class AppSidebar extends LitElement {
              otherwise-empty native titlebar strip instead of a sidebar row. -->
         <img
           class="sidebar-native-brand"
-          src="${productAssetPath(this.productLogoPath, "agentbox-favicon.svg", this.basePath)}"
+          src="${productAssetPath(undefined, "alpendata-mark.png", this.basePath)}"
           alt=${this.productName}
         />
         <div class="sidebar-shell">

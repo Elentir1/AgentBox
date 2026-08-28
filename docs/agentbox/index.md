@@ -14,6 +14,10 @@ configuration paths, environment variables, Gateway protocol, and plugin SDK
 remain internal technical identifiers for compatibility with the upstream
 ecosystem.
 
+The Control UI follows the [AlpenData](https://www.alpendata.ch) visual
+system: Inter, light-first slate surfaces, navy contrast sections, and the
+official red mountain mark with `#dc2626` accents.
+
 ## Isolation model
 
 One customer maps to one host or virtual machine and one Compose project.

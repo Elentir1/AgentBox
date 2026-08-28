@@ -34,6 +34,7 @@ describeControlUiE2e("AgentBox employee experience", () => {
 
   it("brands the product, limits operator routes, and shows document readiness", async () => {
     const context = await browser.newContext({
+      colorScheme: "light",
       locale: "en-US",
       serviceWorkers: "block",
       viewport: { height: 900, width: 1440 },
@@ -77,6 +78,13 @@ describeControlUiE2e("AgentBox employee experience", () => {
     try {
       await page.goto(`${server.baseUrl}overview`);
       await expect.poll(() => page.title()).toBe("AlpenData AgentBox");
+      await expect
+        .poll(async () =>
+          page.evaluate(() =>
+            getComputedStyle(document.documentElement).getPropertyValue("--accent").trim(),
+          ),
+        )
+        .toBe("#dc2626");
       const sidebar = page.locator("openclaw-app-sidebar");
       await expect.poll(() => sidebar.getByRole("link", { name: "Settings" }).count()).toBe(0);
 
@@ -87,20 +95,19 @@ describeControlUiE2e("AgentBox employee experience", () => {
         .toBe(1);
       await expect.poll(() => page.getByText("42 documents available").count()).toBe(1);
       await expect.poll(() => page.getByText("Company documents are searchable").count()).toBe(1);
+      await expect.poll(() => page.locator(".eyebrow").textContent()).toBe("AlpenData AgentBox");
 
-      if (process.env.OPENCLAW_CAPTURE_UI_PROOF === "1") {
-        const artifactDir = path.join(
-          process.cwd(),
-          ".artifacts",
-          "control-ui-e2e",
-          "agentbox-employee",
-        );
-        await mkdir(artifactDir, { recursive: true });
-        await page.screenshot({
-          fullPage: true,
-          path: path.join(artifactDir, "company-documents.png"),
-        });
-      }
+      const artifactDir = path.join(
+        process.cwd(),
+        ".artifacts",
+        "control-ui-e2e",
+        "agentbox-employee",
+      );
+      await mkdir(artifactDir, { recursive: true });
+      await page.screenshot({
+        fullPage: true,
+        path: path.join(artifactDir, "company-documents.png"),
+      });
 
       await page.goto(`${server.baseUrl}settings/general`);
       await expect.poll(() => new URL(page.url()).pathname).toBe("/chat");

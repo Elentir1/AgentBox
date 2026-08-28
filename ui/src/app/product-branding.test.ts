@@ -46,5 +46,6 @@ describe("AgentBox product branding", () => {
     expect(productAssetPath(undefined, "agentbox-logo.svg", "/console")).toBe(
       "/console/agentbox-logo.svg",
     );
+    expect(productAssetPath(undefined, "alpendata-mark.png", "")).toBe("/alpendata-mark.png");
   });
 });

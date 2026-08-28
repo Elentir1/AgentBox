@@ -8,21 +8,21 @@
   },
   "logo": {
     "light": "/assets/agentbox-logo.svg",
-    "dark": "/assets/agentbox-logo.svg"
+    "dark": "/assets/agentbox-logo-dark.svg"
   },
   "fonts": {
     "body": {
-      "family": "Fragment Mono"
+      "family": "Inter"
     },
     "heading": {
-      "family": "DM Sans"
+      "family": "Inter"
     }
   },
   "favicon": "/assets/agentbox-favicon.svg",
   "colors": {
-    "primary": "#0F766E",
-    "dark": "#2563EB",
-    "light": "#14B8A6"
+    "primary": "#dc2626",
+    "dark": "#1b2b4b",
+    "light": "#dc2626"
   },
   "styling": {
     "codeblocks": {

@@ -3,8 +3,10 @@ import { normalizeBasePath } from "../app-route-paths.ts";
 import { resolveControlUiBasePath } from "./browser.ts";
 
 export type ControlUiPublicAsset =
+  | "agentbox-favicon.ico"
   | "agentbox-favicon.svg"
   | "agentbox-logo.svg"
+  | "alpendata-mark.png"
   | "apple-touch-icon.png"
   | "favicon-32.png"
   | "favicon.ico"

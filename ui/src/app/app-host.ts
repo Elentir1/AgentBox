@@ -101,14 +101,14 @@ function resolveTerminalThemeMode(): "dark" | "light" {
   return document.documentElement.dataset.themeMode === "light" ? "light" : "dark";
 }
 
-// The mascot SVG animates via SMIL, so it must load through <img src> —
-// inlining the markup would freeze it (see ui/public/favicon.svg).
+// Official AlpenData mark is a static PNG/SVG; keep it as <img src> so CSS
+// can size the wide lockup without inlining a second copy of the asset.
 function renderConnectingSplash(basePath: string, product: ProductBranding) {
   return html`
     <main class="connect-splash" role="status" aria-live="polite" aria-label=${t("common.loading")}>
       <img
         class="connect-splash__logo"
-        src=${productAssetPath(product.logoPath, "agentbox-favicon.svg", basePath)}
+        src=${productAssetPath(undefined, "alpendata-mark.png", basePath)}
         alt=${product.name}
       />
     </main>
@@ -778,7 +778,6 @@ class OpenClawShell extends LitElement {
           <openclaw-app-sidebar
             .basePath=${context.basePath}
             .productName=${context.config.current.product.name}
-            .productLogoPath=${context.config.current.product.logoPath}
             .productDocsUrl=${context.config.current.product.docsUrl ??
             "https://www.alpendata.ch/agentbox/docs"}
             .activeRouteId=${activeRoute}

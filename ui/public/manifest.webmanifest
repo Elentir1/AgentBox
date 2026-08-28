@@ -4,13 +4,19 @@
   "description": "Secure assistant for your company's internal documents",
   "start_url": "./",
   "display": "standalone",
-  "theme_color": "#0a0a0a",
-  "background_color": "#0a0a0a",
+  "theme_color": "#dc2626",
+  "background_color": "#ffffff",
   "icons": [
     {
       "src": "./agentbox-favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./alpendata-mark.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
       "purpose": "any"
     }
   ]

@@ -75,6 +75,7 @@ describe("AgentBox tenant renderer", () => {
       },
     });
     expect(files["runtime.env.example"]).toContain("MICROSOFT_TOKEN=");
+    expect(batch.find((entry) => entry.path === "ui.seamColor")?.value).toBe("#dc2626");
   });
 
   it("rejects shared or unsafe deployment inputs", () => {

@@ -1,11 +1,7 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AgentBox">
-  <defs>
-    <linearGradient id="agentbox-gradient" x1="8" y1="56" x2="56" y2="8">
-      <stop offset="0" stop-color="#0f766e"/>
-      <stop offset="1" stop-color="#2563eb"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="15" fill="#f8fafc"/>
-  <path d="M10 48 29 15l9 15 5-8 11 26H10Z" fill="url(#agentbox-gradient)"/>
-  <path d="m23 37 6-10 4 7 3-4 7 18H17l6-11Z" fill="#fff" fill-opacity=".9"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AlpenData">
+  <!-- Official AlpenData mark: three peaks + base swoosh in brand red. -->
+  <g fill="#DE1117" transform="translate(2 16) scale(.545)">
+    <path d="M11.6 40 24.3 27.3 30.6 32.3 38.4 24.8 53.4 4.4 61 15.8 66 28 71.4 20.6 78.7 14.7 86.2 22.2 104 38.8 86 43.2 72.2 37.6 53.4 18.8 40.2 37.4 28.4 35.6 18.2 42.8Z"/>
+    <path d="M6 46.8c22-4.4 52 3.2 98-5.4-8 12.6-36 14.8-62 10.8C24.8 49.4 12 50.2 6 46.8Z"/>
+  </g>
 </svg>

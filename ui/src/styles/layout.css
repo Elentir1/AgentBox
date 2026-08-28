@@ -285,18 +285,19 @@
    spending a sidebar row; web builds never show it (breadcrumb has the name). */
 .sidebar-native-brand {
   display: none;
+  object-fit: contain;
 }
 
 @media (min-width: 700px) {
   html.openclaw-native-macos .sidebar:not(.sidebar--collapsed) .sidebar-native-brand {
     /* 84px clears the native traffic-light cluster (drag region starts at 78px).
-       The mark is a transparent SVG; any box-shadow/background reads as a
-       misplaced card behind the mascot, so it renders bare. */
+       The official AlpenData mark is wide; keep it unboxed so it does not read
+       as a card behind the titlebar. */
     position: absolute;
     top: 0;
     left: 84px;
     display: block;
-    width: 22px;
+    width: 48px;
     height: 22px;
     margin-top: calc((var(--openclaw-native-titlebar-height, 50px) - 22px) / 2);
   }
@@ -1764,6 +1765,37 @@
   display: grid;
   gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.page {
+  display: grid;
+  gap: 20px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.page-header h1 {
+  margin: 6px 0 8px;
+  color: var(--text-strong);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+/* alpendata.ch section eyebrows: uppercase, tracked, brand red. */
+.eyebrow {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 .row {

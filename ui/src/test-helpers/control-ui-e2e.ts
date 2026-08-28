@@ -235,6 +235,8 @@ function normalizeScenario(
     product: scenario.product ?? {
       name: "AlpenData AgentBox",
       shortName: "AgentBox",
+      logoPath: "/agentbox-logo.svg",
+      faviconPath: "/agentbox-favicon.svg",
     },
     scopes: scenario.scopes ?? [
       "operator.admin",
@@ -261,7 +263,7 @@ export function createControlUiMockBootstrapConfig(scenario: ControlUiMockGatewa
     embedSandbox: "scripts",
     localMediaPreviewRoots: [],
     product: normalizedScenario.product,
-    seamColor: "#0F766E",
+    seamColor: "#dc2626",
     serverVersion: "e2e",
     shellProfile: normalizedScenario.shellProfile,
     terminalEnabled: normalizedScenario.terminalEnabled,

@@ -35,8 +35,8 @@ if (isProd && "serviceWorker" in navigator) {
 }
 
 function syncDocumentPublicAssetLinks() {
-  setDocumentLinkHref('link[rel="icon"][type="image/svg+xml"]', "favicon.svg");
-  setDocumentLinkHref('link[rel="icon"][type="image/png"]', "favicon-32.png");
+  setDocumentLinkHref('link[rel="icon"][type="image/svg+xml"]', "agentbox-favicon.svg");
+  setDocumentLinkHref('link[rel="alternate icon"]', "agentbox-favicon.ico");
   setDocumentLinkHref('link[rel="apple-touch-icon"]', "apple-touch-icon.png");
   setDocumentLinkHref('link[rel="manifest"]', "manifest.webmanifest");
 }
