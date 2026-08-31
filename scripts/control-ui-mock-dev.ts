@@ -241,7 +241,7 @@ function createCustomerTenantScenario(): ControlUiMockGatewayScenario {
       logoPath: "/alpendata-mark.png",
       faviconPath: "/agentbox-favicon.svg",
     },
-    shellProfile: "auto",
+    shellProfile: "employee",
     scopes: ["operator.read", "operator.write"],
     sessionKey: "agent:acme:main",
     controlUiTabs: [
@@ -702,14 +702,17 @@ function createMockGatewayPlugin(scenario: ControlUiMockGatewayScenario): Plugin
   const initScript = escapeScriptContent(createControlUiMockGatewayInitScript(scenario));
   const bootstrapBody = JSON.stringify(createControlUiMockBootstrapConfig(scenario));
   return {
+    enforce: "pre",
+    name: "openclaw-control-ui-mock-gateway",
     configureServer(server) {
+      // Register before ui/vite.config.ts control-ui-dev-stubs so the employee
+      // shellProfile and product bootstrap are not replaced by the empty stub.
       server.middlewares.use(CONTROL_UI_BOOTSTRAP_CONFIG_PATH, (_req, res) => {
         res.statusCode = 200;
         res.setHeader("content-type", "application/json");
         res.end(bootstrapBody);
       });
     },
-    name: "openclaw-control-ui-mock-gateway",
     transformIndexHtml(html) {
       return html.replace(
         "</head>",
