@@ -1174,12 +1174,28 @@ class AppSidebar extends LitElement {
       : link;
   }
 
-  /** Dynamic plugin tabs stay in More; only stable static route ids can be persisted as pins. */
+  /**
+   * Employee shells hide Settings; company plugin tabs (Company documents) belong
+   * beside Overview. Operator consoles keep dynamic tabs under More so they cannot
+   * be persisted as pins.
+   */
+  private isEmployeeShell(): boolean {
+    return this.isRouteEnabled("plugin") && !this.isRouteEnabled("config");
+  }
+
   private pluginTabs(): GatewayControlUiPluginTab[] {
     const tabs = this.context?.gateway.snapshot.hello?.controlUiTabs ?? [];
     return ["chat", "control", "agent", "settings"].flatMap((group) =>
       tabs.filter((tab) => (tab.group ?? "control") === group),
     );
+  }
+
+  private primaryPluginTabs(): GatewayControlUiPluginTab[] {
+    return this.isEmployeeShell() ? this.pluginTabs() : [];
+  }
+
+  private morePluginTabs(): GatewayControlUiPluginTab[] {
+    return this.isEmployeeShell() ? [] : this.pluginTabs();
   }
 
   private renderPluginTab(tab: GatewayControlUiPluginTab) {
@@ -1567,7 +1583,7 @@ class AppSidebar extends LitElement {
         </button>
         <div class="nav-section__items">
           ${moreRoutes.map((routeId) => this.renderRoute(routeId))}
-          ${this.pluginTabs().map((tab) => this.renderPluginTab(tab))}
+          ${this.morePluginTabs().map((tab) => this.renderPluginTab(tab))}
           <button
             type="button"
             class="nav-item nav-item--action"
@@ -1629,6 +1645,7 @@ class AppSidebar extends LitElement {
               ${this.collapsed ? this.renderRoute("chat") : nothing}
               <div class="nav-section__items">
                 ${this.sidebarPinnedRoutes.map((routeId) => this.renderRoute(routeId))}
+                ${this.primaryPluginTabs().map((tab) => this.renderPluginTab(tab))}
               </div>
               ${this.renderMoreSection()}
             </nav>

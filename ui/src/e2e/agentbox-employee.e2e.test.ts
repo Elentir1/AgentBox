@@ -87,8 +87,10 @@ describeControlUiE2e("AgentBox employee experience", () => {
         .toBe("#dc2626");
       const sidebar = page.locator("openclaw-app-sidebar");
       await expect.poll(() => sidebar.getByRole("link", { name: "Settings" }).count()).toBe(0);
+      await expect
+        .poll(() => sidebar.getByRole("link", { name: "Company documents" }).count())
+        .toBe(1);
 
-      await sidebar.getByRole("button", { name: "More" }).click();
       await sidebar.getByRole("link", { name: "Company documents" }).click();
       await expect
         .poll(() => page.getByRole("heading", { name: "Company knowledge" }).count())

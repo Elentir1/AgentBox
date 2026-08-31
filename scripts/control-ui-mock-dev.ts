@@ -19,6 +19,7 @@ type CliOptions = {
   allowedHosts: string[];
   host: string;
   port: number;
+  scenario: "chat-picker" | "customer";
 };
 
 type SessionListOptions = {
@@ -36,7 +37,12 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const uiRoot = path.join(repoRoot, "ui");
 
 function parseArgs(args: string[]): CliOptions {
-  const options: CliOptions = { allowedHosts: [], host: "127.0.0.1", port: 5187 };
+  const options: CliOptions = {
+    allowedHosts: [],
+    host: "127.0.0.1",
+    port: 5187,
+    scenario: "chat-picker",
+  };
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     if (arg === "--allowed-host") {
@@ -57,9 +63,20 @@ function parseArgs(args: string[]): CliOptions {
       options.port = parsePort(args[++i], options.port);
     } else if (arg.startsWith("--port=")) {
       options.port = parsePort(arg.slice("--port=".length), options.port);
+    } else if (arg === "--scenario") {
+      options.scenario = parseScenario(args[++i], options.scenario);
+    } else if (arg.startsWith("--scenario=")) {
+      options.scenario = parseScenario(arg.slice("--scenario=".length), options.scenario);
     }
   }
   return options;
+}
+
+function parseScenario(
+  value: string | undefined,
+  fallback: CliOptions["scenario"],
+): CliOptions["scenario"] {
+  return value === "customer" || value === "chat-picker" ? value : fallback;
 }
 
 function parsePort(value: string | undefined, fallback: number): number {
@@ -204,6 +221,116 @@ function buildScrollableChatHistory(baseTime: number): unknown[] {
 
 function searchPrefixes(term: string): string[] {
   return Array.from({ length: term.length }, (_value, index) => term.slice(0, index + 1));
+}
+
+function createCustomerTenantScenario(): ControlUiMockGatewayScenario {
+  const baseTime = Date.parse("2026-08-31T09:00:00.000Z");
+  const lastSyncAt = "2026-08-31T08:30:00Z";
+  const sessions = [
+    sessionRow("agent:acme:main", "Acme SA", baseTime),
+    sessionRow("agent:acme:rh", "Questions RH", baseTime - 3_600_000),
+    sessionRow("agent:acme:contrats", "Contrats 2026", baseTime - 7_200_000),
+  ];
+  return {
+    assistantAgentId: "acme",
+    assistantName: "AgentBox",
+    defaultAgentId: "acme",
+    product: {
+      name: "AlpenData AgentBox",
+      shortName: "AgentBox",
+      logoPath: "/alpendata-mark.png",
+      faviconPath: "/agentbox-favicon.svg",
+    },
+    shellProfile: "auto",
+    scopes: ["operator.read", "operator.write"],
+    sessionKey: "agent:acme:main",
+    controlUiTabs: [
+      {
+        group: "control",
+        icon: "fileText",
+        id: "documents",
+        label: "Company documents",
+        pluginId: "agentbox",
+      },
+    ],
+    featureMethods: ["agentbox.status", "agentbox.sync", "chat.metadata", "chat.startup"],
+    historyMessages: [
+      chatHistoryMessage("user", "Quelle est la politique de télétravail d'Acme SA ?", baseTime),
+      chatHistoryMessage(
+        "assistant",
+        "Selon le règlement interne (SharePoint · finance-sharepoint), le télétravail est autorisé jusqu'à 3 jours par semaine, avec présence obligatoire le mardi. Les demandes exceptionnelles passent par le responsable d'équipe.\n\nSources : Règlement interne 2026, p. 12.",
+        baseTime + 4_000,
+      ),
+      chatHistoryMessage("user", "Où trouver le contrat-type fournisseur ?", baseTime + 60_000),
+      chatHistoryMessage(
+        "assistant",
+        "Le contrat-type fournisseur 2026 est dans le dossier Contrats (kDrive). La version en vigueur est Contrat-type-fournisseur-2026-v3.pdf. Les annexes assurance et RGPD sont dans le même dossier.\n\nSources : Contrats 2026 / kDrive.",
+        baseTime + 64_000,
+      ),
+    ],
+    methodResponses: {
+      "agentbox.status": {
+        tenantId: "acme",
+        running: true,
+        syncInProgress: false,
+        lastSyncCompletedAt: lastSyncAt,
+        sources: [
+          {
+            id: "finance-sharepoint",
+            type: "microsoft-365",
+            state: "ready",
+            indexed: 42,
+            uploaded: 0,
+            deleted: 0,
+            skipped: 42,
+            lastSyncAt,
+          },
+          {
+            id: "shared-drive",
+            type: "google-drive",
+            state: "ready",
+            indexed: 18,
+            uploaded: 0,
+            deleted: 0,
+            skipped: 18,
+            lastSyncAt,
+          },
+          {
+            id: "kdrive",
+            type: "webdav",
+            state: "ready",
+            indexed: 27,
+            uploaded: 0,
+            deleted: 0,
+            skipped: 27,
+            lastSyncAt,
+          },
+          {
+            id: "network-pdfs",
+            type: "local",
+            state: "ready",
+            indexed: 11,
+            uploaded: 0,
+            deleted: 0,
+            skipped: 11,
+            lastSyncAt,
+          },
+        ],
+      },
+      "sessions.list": {
+        count: sessions.length,
+        defaults: {
+          contextTokens: 200_000,
+          model: "gpt-5.5",
+          modelProvider: "openai",
+        },
+        path: "",
+        sessions,
+        ts: baseTime,
+      },
+    },
+    models: [{ id: "gpt-5.5", name: "gpt-5.5", provider: "openai" }],
+  };
 }
 
 async function createChatPickerScenario(): Promise<ControlUiMockGatewayScenario> {
@@ -614,7 +741,10 @@ async function waitForShutdown(): Promise<void> {
 }
 
 const options = parseArgs(process.argv.slice(2));
-const scenario = await createChatPickerScenario();
+const scenario =
+  options.scenario === "customer"
+    ? createCustomerTenantScenario()
+    : await createChatPickerScenario();
 const server = await createServer({
   base: "/",
   cacheDir: path.join(repoRoot, ".artifacts", "control-ui-mock-vite"),
@@ -638,7 +768,7 @@ const server = await createServer({
   },
   root: uiRoot,
   server: {
-    allowedHosts: options.allowedHosts,
+    allowedHosts: options.allowedHosts.length > 0 ? options.allowedHosts : true,
     host: options.host,
     port: options.port,
     strictPort: true,
