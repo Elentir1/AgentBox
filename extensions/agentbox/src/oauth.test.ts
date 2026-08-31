@@ -9,6 +9,16 @@ function requestUrl(input: string | URL | Request): string {
   return typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 }
 
+function requestBody(init?: RequestInit): string | undefined {
+  if (typeof init?.body === "string") {
+    return init.body;
+  }
+  if (init?.body instanceof URLSearchParams) {
+    return init.body.toString();
+  }
+  return undefined;
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
   delete process.env.AGENTBOX_MS_TENANT_ID;
@@ -32,7 +42,7 @@ describe("AgentBox source OAuth", () => {
         requests.push({
           url,
           authorization: new Headers(init?.headers).get("authorization") ?? undefined,
-          body: typeof init?.body === "string" ? init.body : undefined,
+          body: requestBody(init),
         });
         if (url.includes("login.microsoftonline.com")) {
           return Response.json({ access_token: `graph-${requests.length}`, expires_in: 3600 });
@@ -84,7 +94,7 @@ describe("AgentBox source OAuth", () => {
         requests.push({
           url,
           authorization: new Headers(init?.headers).get("authorization") ?? undefined,
-          body: typeof init?.body === "string" ? init.body : undefined,
+          body: requestBody(init),
         });
         if (url === "https://oauth2.googleapis.com/token") {
           return Response.json({ access_token: `drive-${requests.length}`, expires_in: 3600 });
