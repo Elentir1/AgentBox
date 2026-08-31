@@ -132,6 +132,23 @@ export class RagFlowClient {
     });
   }
 
+  async inspect(): Promise<{ datasetId: string }> {
+    const data = await this.request(
+      `/api/v1/datasets/${encodeURIComponent(this.config.datasetId)}`,
+      { method: "GET" },
+    );
+    const parsed = z
+      .object({ id: z.string().optional() })
+      .passthrough()
+      .parse(data ?? {});
+    if (parsed.id && parsed.id !== this.config.datasetId) {
+      throw new Error(
+        `RAGFlow dataset ${parsed.id} does not match configured dataset ${this.config.datasetId}.`,
+      );
+    }
+    return { datasetId: this.config.datasetId };
+  }
+
   async search(question: string, limit = 8): Promise<AgentBoxSearchResult[]> {
     const data = await this.request("/api/v1/retrieval", {
       method: "POST",

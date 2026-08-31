@@ -1463,11 +1463,30 @@ export const pl: TranslationMap = {
     showPassword: "Pokaż hasło",
     hidePassword: "Ukryj hasło",
     togglePasswordVisibility: "Przełącz widoczność hasła",
+    employee: {
+      retry: "Spróbuj ponownie",
+    },
     failure: {
       rawError: "Surowy błąd",
       docsAuth: "Dokumentacja uwierzytelniania Control UI",
       docsPairing: "Dokumentacja parowania urządzeń",
       docsInsecure: "Dokumentacja niebezpiecznego HTTP",
+      docsSupport: "Skontaktuj się z AlpenData",
+      employee: {
+        title: "Zaloguj się przez firmę",
+        summary:
+          "Ta AgentBox używa tożsamości Twojej firmy. Otwórz asystenta z portalu firmowego albo skontaktuj się z AlpenData, jeśli sesja wygasła.",
+        stepCompany: "Zaloguj się ponownie przez dostawcę tożsamości firmy.",
+        stepPortal: "Otwórz AgentBox z firmowego linku przekazanego przez administratora.",
+        stepSupport: "Jeśli nadal nie możesz się połączyć, skontaktuj się z AlpenData.",
+        network: {
+          title: "Nie można połączyć się z AgentBox",
+          summary:
+            "Asystent jest niedostępny w tej przeglądarce. Spróbuj ponownie z portalu firmowego, a jeśli problem trwa, skontaktuj się z AlpenData.",
+          stepPortal: "Odśwież AgentBox z portalu firmowego lub zakładki.",
+          stepSupport: "Skontaktuj się z AlpenData, jeśli awaria trwa.",
+        },
+      },
       authRequired: {
         title: "Wymagane uwierzytelnienie",
         summary:

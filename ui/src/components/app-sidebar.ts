@@ -131,7 +131,7 @@ class AppSidebar extends LitElement {
 
   @property({ attribute: false }) basePath = "";
   @property({ attribute: false }) productName = "AlpenData AgentBox";
-  @property({ attribute: false }) productDocsUrl = "https://www.alpendata.ch/agentbox/docs";
+  @property({ attribute: false }) productDocsUrl = "";
   @property({ attribute: false }) activeRouteId?: NavigationRouteId;
   @property({ attribute: false }) activePluginTabId = "";
   @property({ attribute: false }) enabledRouteIds?: readonly NavigationRouteId[];
@@ -1693,19 +1693,23 @@ class AppSidebar extends LitElement {
                     </openclaw-tooltip>
                   `
                 : nothing}
-              <openclaw-tooltip
-                .content=${t("chat.docsOpensInNewTab", { label: t("common.docs") })}
-              >
-                <a
-                  class="sidebar-footer-icon"
-                  href=${this.productDocsUrl}
-                  target=${EXTERNAL_LINK_TARGET}
-                  rel=${buildExternalLinkRel()}
-                  aria-label=${t("common.docs")}
-                >
-                  ${icons.book}
-                </a>
-              </openclaw-tooltip>
+              ${this.productDocsUrl.startsWith("https://")
+                ? html`
+                    <openclaw-tooltip
+                      .content=${t("chat.docsOpensInNewTab", { label: t("common.docs") })}
+                    >
+                      <a
+                        class="sidebar-footer-icon"
+                        href=${this.productDocsUrl}
+                        target=${EXTERNAL_LINK_TARGET}
+                        rel=${buildExternalLinkRel()}
+                        aria-label=${t("common.docs")}
+                      >
+                        ${icons.book}
+                      </a>
+                    </openclaw-tooltip>
+                  `
+                : nothing}
               <openclaw-tooltip
                 .content=${this.canPairDevice
                   ? t("nodes.pairing.button")

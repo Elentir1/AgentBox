@@ -12,8 +12,12 @@ function requestUrl(input: string | URL | Request): string {
 
 afterEach(async () => {
   vi.unstubAllGlobals();
-  delete process.env.AGENTBOX_GRAPH_TOKEN;
-  delete process.env.AGENTBOX_GOOGLE_TOKEN;
+  delete process.env.AGENTBOX_MS_TENANT_ID;
+  delete process.env.AGENTBOX_MS_CLIENT_ID;
+  delete process.env.AGENTBOX_MS_CLIENT_SECRET;
+  delete process.env.AGENTBOX_GOOGLE_CLIENT_ID;
+  delete process.env.AGENTBOX_GOOGLE_CLIENT_SECRET;
+  delete process.env.AGENTBOX_GOOGLE_REFRESH_TOKEN;
   await Promise.all(
     temporaryDirectories
       .splice(0)
@@ -36,8 +40,10 @@ describe("AgentBox document sources", () => {
     await expect(scan.documents[0]?.read()).resolves.toEqual(new Uint8Array(Buffer.from("pdf")));
   });
 
-  it("follows Microsoft Graph delta pages and exposes downloadable files", async () => {
-    process.env.AGENTBOX_GRAPH_TOKEN = "token";
+  it("follows Microsoft Graph delta pages with a client-credentials token", async () => {
+    process.env.AGENTBOX_MS_TENANT_ID = "tenant-guid";
+    process.env.AGENTBOX_MS_CLIENT_ID = "client-id";
+    process.env.AGENTBOX_MS_CLIENT_SECRET = "client-secret";
     const requests: Array<{ url: string; authorization?: string }> = [];
     vi.stubGlobal(
       "fetch",
@@ -47,6 +53,9 @@ describe("AgentBox document sources", () => {
           url,
           authorization: new Headers(init?.headers).get("authorization") ?? undefined,
         });
+        if (url.includes("login.microsoftonline.com")) {
+          return Response.json({ access_token: "graph-token", expires_in: 3600 });
+        }
         if (url.endsWith("/content")) {
           return new Response("document");
         }
@@ -72,7 +81,9 @@ describe("AgentBox document sources", () => {
       id: "sharepoint",
       type: "microsoft-365",
       driveId: "drive",
-      accessTokenEnv: "AGENTBOX_GRAPH_TOKEN",
+      entraTenantIdEnv: "AGENTBOX_MS_TENANT_ID",
+      clientIdEnv: "AGENTBOX_MS_CLIENT_ID",
+      clientSecretEnv: "AGENTBOX_MS_CLIENT_SECRET",
     }).scan();
 
     expect(scan.cursor).toContain("token=next");
@@ -83,15 +94,24 @@ describe("AgentBox document sources", () => {
     await expect(scan.documents[0]?.read()).resolves.toEqual(
       new Uint8Array(Buffer.from("document")),
     );
-    expect(requests.every((request) => request.authorization === "Bearer token")).toBe(true);
+    expect(
+      requests
+        .filter((request) => request.url.includes("graph.microsoft.com"))
+        .every((request) => request.authorization === "Bearer graph-token"),
+    ).toBe(true);
   });
 
   it("captures Google Drive files before storing the changes cursor", async () => {
-    process.env.AGENTBOX_GOOGLE_TOKEN = "token";
+    process.env.AGENTBOX_GOOGLE_CLIENT_ID = "client-id";
+    process.env.AGENTBOX_GOOGLE_CLIENT_SECRET = "client-secret";
+    process.env.AGENTBOX_GOOGLE_REFRESH_TOKEN = "refresh-token";
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string | URL | Request) => {
         const url = requestUrl(input);
+        if (url === "https://oauth2.googleapis.com/token") {
+          return Response.json({ access_token: "drive-token", expires_in: 3600 });
+        }
         if (url.includes("startPageToken")) {
           return Response.json({ startPageToken: "cursor-2" });
         }
@@ -113,7 +133,9 @@ describe("AgentBox document sources", () => {
       id: "drive",
       type: "google-drive",
       driveId: "shared-drive",
-      accessTokenEnv: "AGENTBOX_GOOGLE_TOKEN",
+      clientIdEnv: "AGENTBOX_GOOGLE_CLIENT_ID",
+      clientSecretEnv: "AGENTBOX_GOOGLE_CLIENT_SECRET",
+      refreshTokenEnv: "AGENTBOX_GOOGLE_REFRESH_TOKEN",
     }).scan();
 
     expect(scan.mode).toBe("snapshot");
@@ -151,5 +173,19 @@ describe("AgentBox document sources", () => {
     expect(() =>
       parseWebDavMultiStatus("<!DOCTYPE x [<!ENTITY secret SYSTEM 'file:///etc/passwd'>]>"),
     ).toThrow("forbidden");
+  });
+
+  it("refuses non-HTTPS WebDAV origins", () => {
+    expect(() =>
+      createSourceAdapter({
+        id: "kdrive",
+        type: "webdav",
+        baseUrl: "http://123456.connect.kdrive.infomaniak.com",
+        rootPath: "/",
+        usernameEnv: "AGENTBOX_KDRIVE_USERNAME",
+        passwordEnv: "AGENTBOX_KDRIVE_PASSWORD",
+        allowPrivateNetwork: false,
+      }),
+    ).toThrow("HTTPS");
   });
 });

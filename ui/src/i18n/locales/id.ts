@@ -1459,11 +1459,30 @@ export const id: TranslationMap = {
     showPassword: "Tampilkan kata sandi",
     hidePassword: "Sembunyikan kata sandi",
     togglePasswordVisibility: "Alihkan visibilitas kata sandi",
+    employee: {
+      retry: "Coba lagi",
+    },
     failure: {
       rawError: "Error mentah",
       docsAuth: "Dokumentasi auth Control UI",
       docsPairing: "Dokumentasi pemasangan perangkat",
       docsInsecure: "Dokumentasi HTTP tidak aman",
+      docsSupport: "Hubungi AlpenData",
+      employee: {
+        title: "Masuk melalui perusahaan Anda",
+        summary:
+          "AgentBox ini menggunakan identitas perusahaan Anda. Buka asisten dari portal perusahaan, atau hubungi AlpenData jika sesi berakhir.",
+        stepCompany: "Masuk lagi melalui penyedia identitas perusahaan Anda.",
+        stepPortal: "Buka AgentBox dari tautan perusahaan yang diberikan administrator.",
+        stepSupport: "Jika masih tidak dapat terhubung, hubungi AlpenData.",
+        network: {
+          title: "Tidak dapat menjangkau AgentBox",
+          summary:
+            "Asisten tidak dapat dijangkau dari browser ini. Coba lagi dari portal perusahaan, lalu hubungi AlpenData jika masih gagal.",
+          stepPortal: "Muat ulang AgentBox dari portal atau bookmark perusahaan Anda.",
+          stepSupport: "Hubungi AlpenData jika gangguan berlanjut.",
+        },
+      },
       authRequired: {
         title: "Auth diperlukan",
         summary:

@@ -75,4 +75,47 @@ describe("AgentBox search tool", () => {
       ],
     });
   });
+
+  it("tells the model when the company corpus has no match", async () => {
+    const service = new AgentBoxService(
+      {
+        tenantId: "acme",
+        backend: {
+          baseUrl: "https://ragflow.example.test",
+          datasetId: "acme",
+          apiKeyEnv: "RAGFLOW_API_KEY",
+          allowPrivateNetwork: false,
+        },
+        sync: { intervalMinutes: 15, maxFileBytes: 1024 },
+        sources: [{ id: "local", type: "local", root: "/documents" }],
+      },
+      {
+        documentsForSource: async () => [],
+        authorizedDocumentIds: async () => new Set(),
+        cursorForSource: async () => undefined,
+        putDocument: async () => undefined,
+        deleteDocument: async () => undefined,
+        putCursor: async () => undefined,
+        appendAudit: async () => undefined,
+        listAudit: async () => [],
+      },
+      { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+      {
+        client: {
+          upload: vi.fn(async () => "unused"),
+          delete: vi.fn(async () => undefined),
+          search: vi.fn(async () => []),
+        },
+      },
+    );
+    const tool = createAgentBoxSearchTool(() => service);
+
+    const result = await tool.execute("call-2", { query: "secret salary bands" });
+
+    expect(result.content[0]).toMatchObject({
+      type: "text",
+      text: "No authorized company document matched this question.",
+    });
+    expect(result.details).toEqual({ citations: [] });
+  });
 });

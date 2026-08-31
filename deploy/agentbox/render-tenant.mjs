@@ -66,7 +66,9 @@ function normalizeSource(value, index) {
       id,
       type,
       driveId: requireString(source.driveId, `source ${id}.driveId`),
-      accessTokenEnv: requireEnvName(source.accessTokenEnv, `source ${id}.accessTokenEnv`),
+      entraTenantIdEnv: requireEnvName(source.entraTenantIdEnv, `source ${id}.entraTenantIdEnv`),
+      clientIdEnv: requireEnvName(source.clientIdEnv, `source ${id}.clientIdEnv`),
+      clientSecretEnv: requireEnvName(source.clientSecretEnv, `source ${id}.clientSecretEnv`),
     };
   }
   if (type === "google-drive") {
@@ -74,7 +76,9 @@ function normalizeSource(value, index) {
       id,
       type,
       driveId: typeof source.driveId === "string" ? source.driveId.trim() : undefined,
-      accessTokenEnv: requireEnvName(source.accessTokenEnv, `source ${id}.accessTokenEnv`),
+      clientIdEnv: requireEnvName(source.clientIdEnv, `source ${id}.clientIdEnv`),
+      clientSecretEnv: requireEnvName(source.clientSecretEnv, `source ${id}.clientSecretEnv`),
+      refreshTokenEnv: requireEnvName(source.refreshTokenEnv, `source ${id}.refreshTokenEnv`),
     };
   }
   return {
@@ -113,8 +117,12 @@ export function normalizeTenantManifest(input) {
   const provider = requireRecord(spec.provider, "spec.provider");
   const documents = requireRecord(spec.documents, "spec.documents");
   const backend = requireRecord(documents.backend, "spec.documents.backend");
-  const identity = requireRecord(spec.identity ?? { mode: "token" }, "spec.identity");
-  const identityMode = identity.mode === "trusted-proxy" ? "trusted-proxy" : "token";
+  const identity = requireRecord(spec.identity, "spec.identity");
+  const identityModeRaw = requireString(identity.mode, "spec.identity.mode");
+  if (identityModeRaw !== "trusted-proxy" && identityModeRaw !== "token") {
+    throw new Error("spec.identity.mode must be trusted-proxy or token.");
+  }
+  const identityMode = identityModeRaw;
   if (identityMode === "trusted-proxy") {
     requireString(identity.userHeader, "identity.userHeader");
     if (!Array.isArray(identity.trustedProxies) || identity.trustedProxies.length === 0) {
@@ -253,9 +261,7 @@ export function renderTenantArtifacts(input) {
       shortName: "AgentBox",
       logoPath: "/agentbox-logo.svg",
       faviconPath: "/agentbox-favicon.svg",
-      docsUrl: "https://www.alpendata.ch/agentbox/docs",
       supportUrl: "https://www.alpendata.ch/contact",
-      privacyUrl: "https://www.alpendata.ch/privacy",
     },
     shellProfile: "auto",
   };
@@ -287,7 +293,14 @@ export function renderTenantArtifacts(input) {
     tenant.documents.backend.apiKeyEnv,
   ]);
   for (const source of tenant.documents.sources) {
-    for (const key of ["accessTokenEnv", "usernameEnv", "passwordEnv"]) {
+    for (const key of [
+      "entraTenantIdEnv",
+      "clientIdEnv",
+      "clientSecretEnv",
+      "refreshTokenEnv",
+      "usernameEnv",
+      "passwordEnv",
+    ]) {
       if (source[key]) {
         secretNames.add(source[key]);
       }
@@ -316,8 +329,22 @@ export function renderTenantArtifacts(input) {
         .sort()
         .map((name) => `${name}=`)
         .join("\n")}\n`,
+      "workspace/AGENTS.md": renderWorkspaceAgents(tenant.displayName),
     },
   };
+}
+
+function renderWorkspaceAgents(displayName) {
+  return `# ${displayName} assistant
+
+You answer employees using only company documents retrieved through the \`agentbox_search\` tool.
+
+- Call \`agentbox_search\` before citing any internal policy, contract, or file.
+- Cite only document names and excerpts the tool returned.
+- If the tool returns no authorized match, say the company corpus does not contain the answer. Do not invent SharePoint, Drive, or kDrive sources.
+- Do not use general web knowledge as a substitute for missing internal documents.
+- Every employee on this AgentBox can search the same company corpus. There is no per-file ACL in this version.
+`;
 }
 
 export async function renderTenantFile(manifestPath, outputDir) {
@@ -325,7 +352,9 @@ export async function renderTenantFile(manifestPath, outputDir) {
   const artifacts = renderTenantArtifacts(parseYaml(source));
   await fs.mkdir(outputDir, { recursive: true, mode: 0o750 });
   for (const [name, content] of Object.entries(artifacts.files)) {
-    await fs.writeFile(path.join(outputDir, name), content, {
+    const filePath = path.join(outputDir, name);
+    await fs.mkdir(path.dirname(filePath), { recursive: true, mode: 0o750 });
+    await fs.writeFile(filePath, content, {
       mode: name === ".env" ? 0o640 : 0o644,
     });
   }

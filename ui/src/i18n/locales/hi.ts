@@ -1449,11 +1449,30 @@ export const hi: TranslationMap = {
     showPassword: "पासवर्ड दिखाएँ",
     hidePassword: "पासवर्ड छिपाएँ",
     togglePasswordVisibility: "पासवर्ड दृश्यता टॉगल करें",
+    employee: {
+      retry: "फिर से कोशिश करें",
+    },
     failure: {
       rawError: "कच्ची त्रुटि",
       docsAuth: "Control UI ऑथ दस्तावेज़",
       docsPairing: "डिवाइस पेयरिंग दस्तावेज़",
       docsInsecure: "असुरक्षित HTTP दस्तावेज़",
+      docsSupport: "AlpenData से संपर्क करें",
+      employee: {
+        title: "अपनी कंपनी के माध्यम से साइन इन करें",
+        summary:
+          "यह AgentBox आपकी कंपनी की पहचान का उपयोग करता है। कंपनी पोर्टल से सहायक खोलें, या सत्र समाप्त होने पर AlpenData से संपर्क करें।",
+        stepCompany: "अपनी कंपनी के पहचान प्रदाता के माध्यम से फिर से साइन इन करें।",
+        stepPortal: "व्यवस्थापक द्वारा दिए गए कंपनी लिंक से AgentBox खोलें।",
+        stepSupport: "अगर अभी भी कनेक्ट नहीं हो पा रहा है, तो AlpenData से संपर्क करें।",
+        network: {
+          title: "AgentBox तक नहीं पहुँच सके",
+          summary:
+            "यह ब्राउज़र सहायक तक नहीं पहुँच सकता. कंपनी पोर्टल से फिर कोशिश करें, और समस्या बनी रहे तो AlpenData से संपर्क करें।",
+          stepPortal: "अपने कंपनी पोर्टल या बुकमार्क से AgentBox फिर लोड करें।",
+          stepSupport: "आउटेज जारी रहने पर AlpenData से संपर्क करें।",
+        },
+      },
       authRequired: {
         title: "ऑथ आवश्यक",
         summary:

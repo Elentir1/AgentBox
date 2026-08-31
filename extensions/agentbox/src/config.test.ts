@@ -1,12 +1,29 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { requireConfiguredSecret, resolveAgentBoxConfig } from "./config.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { isTenantScopedDataset, requireConfiguredSecret, resolveAgentBoxConfig } from "./config.js";
 
 afterEach(() => {
   delete process.env.AGENTBOX_TEST_SECRET;
 });
 
+const microsoftSource = {
+  id: "microsoft",
+  type: "microsoft-365" as const,
+  driveId: "drive-id",
+  entraTenantIdEnv: "AGENTBOX_MS_TENANT_ID",
+  clientIdEnv: "AGENTBOX_MS_CLIENT_ID",
+  clientSecretEnv: "AGENTBOX_MS_CLIENT_SECRET",
+};
+
+const googleSource = {
+  id: "google",
+  type: "google-drive" as const,
+  clientIdEnv: "AGENTBOX_GOOGLE_CLIENT_ID",
+  clientSecretEnv: "AGENTBOX_GOOGLE_CLIENT_SECRET",
+  refreshTokenEnv: "AGENTBOX_GOOGLE_REFRESH_TOKEN",
+};
+
 describe("AgentBox config", () => {
-  it("accepts one isolated tenant with all source families", () => {
+  it("accepts one isolated tenant with renewable source credentials", () => {
     const config = resolveAgentBoxConfig({
       tenantId: "acme",
       backend: {
@@ -17,17 +34,8 @@ describe("AgentBox config", () => {
       },
       sources: [
         { id: "local", type: "local", root: "/documents" },
-        {
-          id: "google",
-          type: "google-drive",
-          accessTokenEnv: "GOOGLE_ACCESS_TOKEN",
-        },
-        {
-          id: "microsoft",
-          type: "microsoft-365",
-          driveId: "drive-id",
-          accessTokenEnv: "MICROSOFT_ACCESS_TOKEN",
-        },
+        googleSource,
+        microsoftSource,
         {
           id: "webdav",
           type: "webdav",
@@ -45,9 +53,11 @@ describe("AgentBox config", () => {
       "microsoft-365",
       "webdav",
     ]);
+    expect(isTenantScopedDataset("acme", "acme-internal")).toBe(true);
+    expect(isTenantScopedDataset("acme", "other")).toBe(false);
   });
 
-  it("rejects duplicate sources and insecure WebDAV", () => {
+  it("rejects disposable access tokens, duplicate sources, and insecure transports", () => {
     const base = {
       tenantId: "acme",
       backend: {
@@ -70,6 +80,19 @@ describe("AgentBox config", () => {
         ...base,
         sources: [
           {
+            id: "microsoft",
+            type: "microsoft-365",
+            driveId: "drive-id",
+            accessTokenEnv: "MICROSOFT_ACCESS_TOKEN",
+          },
+        ],
+      }),
+    ).toThrow();
+    expect(() =>
+      resolveAgentBoxConfig({
+        ...base,
+        sources: [
+          {
             id: "dav",
             type: "webdav",
             baseUrl: "http://cloud.example.test",
@@ -79,6 +102,16 @@ describe("AgentBox config", () => {
         ],
       }),
     ).toThrow("WebDAV requires HTTPS");
+    expect(() =>
+      resolveAgentBoxConfig({
+        ...base,
+        backend: {
+          ...base.backend,
+          baseUrl: "http://ragflow.internal:9380",
+        },
+        sources: [{ id: "local", type: "local", root: "/documents" }],
+      }),
+    ).toThrow("allowPrivateNetwork");
   });
 
   it("loads secrets only from the named process environment", () => {

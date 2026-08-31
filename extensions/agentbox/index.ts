@@ -5,7 +5,11 @@ import {
   type GatewayRequestHandlerOptions,
 } from "openclaw/plugin-sdk/gateway-runtime";
 import { definePluginEntry } from "./api.js";
-import { agentBoxConfigSchema, resolveAgentBoxConfig } from "./src/config.js";
+import {
+  agentBoxConfigSchema,
+  isTenantScopedDataset,
+  resolveAgentBoxConfig,
+} from "./src/config.js";
 import { AgentBoxService } from "./src/service.js";
 import { createAgentBoxStateStore } from "./src/state.js";
 import { createAgentBoxSearchTool, createAgentBoxSyncTool } from "./src/tools.js";
@@ -31,7 +35,7 @@ export default definePluginEntry({
       surface: "tab",
       id: "documents",
       label: "Company documents",
-      description: "Document connections, synchronization health, and onboarding progress.",
+      description: "Document source health, RAGFlow status, and indexed company files.",
       icon: "fileText",
       group: "control",
       requiredScopes: ["operator.read"],
@@ -55,10 +59,7 @@ export default definePluginEntry({
             "Use HTTPS, or verify that the backend is reachable only on an isolated tenant network.",
         });
       }
-      if (
-        config.backend.datasetId !== config.tenantId &&
-        !config.backend.datasetId.startsWith(`${config.tenantId}-`)
-      ) {
+      if (!isTenantScopedDataset(config.tenantId, config.backend.datasetId)) {
         findings.push({
           checkId: "agentbox.backend.dataset",
           severity: "critical",
@@ -113,7 +114,7 @@ export default definePluginEntry({
 
     api.registerGatewayMethod(
       "agentbox.status",
-      handle(() => requireService().status()),
+      handle(() => requireService().refreshStatus()),
       { scope: "operator.read" },
     );
     api.registerGatewayMethod(

@@ -20,7 +20,7 @@
     "spec": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["image", "hostRoot", "publicOrigin", "provider", "documents"],
+      "required": ["image", "hostRoot", "publicOrigin", "identity", "provider", "documents"],
       "properties": {
         "image": { "type": "string", "minLength": 1 },
         "hostRoot": { "type": "string", "pattern": "^/" },
@@ -84,6 +84,16 @@
                   "type": {
                     "enum": ["google-drive", "local", "microsoft-365", "webdav"]
                   },
+                  "root": { "type": "string" },
+                  "driveId": { "type": "string" },
+                  "baseUrl": { "type": "string", "format": "uri" },
+                  "rootPath": { "type": "string" },
+                  "entraTenantIdEnv": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+                  "clientIdEnv": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+                  "clientSecretEnv": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+                  "refreshTokenEnv": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+                  "usernameEnv": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+                  "passwordEnv": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
                   "allowPrivateNetwork": { "type": "boolean" }
                 }
               }

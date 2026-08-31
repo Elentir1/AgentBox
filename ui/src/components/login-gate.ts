@@ -48,6 +48,7 @@ export type LoginGateProps = {
   password: string;
   showGatewayToken: boolean;
   showGatewayPassword: boolean;
+  shellProfile?: "auto" | "employee" | "full";
   onGatewayUrlChange: (value: string) => void;
   onTokenChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
@@ -62,9 +63,18 @@ type LoginFailureFeedbackParams = {
   lastErrorCode?: string | null;
   hasToken: boolean;
   hasPassword: boolean;
+  employeeSession: boolean;
+  supportHref: string;
 };
 
+function isEmployeeLogin(shellProfile: LoginGateProps["shellProfile"]): boolean {
+  return shellProfile === "auto" || shellProfile === "employee";
+}
+
 function resolveDocsLabel(href: string): string {
+  if (href.includes("alpendata.ch")) {
+    return t("login.failure.docsSupport");
+  }
   if (href.includes("insecure-http")) {
     return t("login.failure.docsInsecure");
   }
@@ -224,6 +234,20 @@ function resolveLoginFailureFeedback(
     hasToken: params.hasToken,
     hasPassword: params.hasPassword,
   });
+  if (params.employeeSession && (authHintKind === "required" || authHintKind === "failed")) {
+    return buildFeedback({
+      kind: authHintKind === "required" ? "auth-required" : "auth-failed",
+      rawError,
+      docsHref: params.supportHref,
+      titleKey: "login.failure.employee.title",
+      summaryKey: "login.failure.employee.summary",
+      stepKeys: [
+        "login.failure.employee.stepCompany",
+        "login.failure.employee.stepPortal",
+        "login.failure.employee.stepSupport",
+      ],
+    });
+  }
   if (authHintKind === "required") {
     return buildFeedback({
       kind: "auth-required",
@@ -254,13 +278,20 @@ function resolveLoginFailureFeedback(
   return buildFeedback({
     kind: "network",
     rawError,
-    titleKey: "login.failure.network.title",
-    summaryKey: "login.failure.network.summary",
-    stepKeys: [
-      "login.failure.network.stepGateway",
-      "login.failure.network.stepUrl",
-      "login.failure.network.stepDashboard",
-    ],
+    docsHref: params.employeeSession ? params.supportHref : undefined,
+    titleKey: params.employeeSession
+      ? "login.failure.employee.network.title"
+      : "login.failure.network.title",
+    summaryKey: params.employeeSession
+      ? "login.failure.employee.network.summary"
+      : "login.failure.network.summary",
+    stepKeys: params.employeeSession
+      ? ["login.failure.employee.network.stepPortal", "login.failure.employee.network.stepSupport"]
+      : [
+          "login.failure.network.stepGateway",
+          "login.failure.network.stepUrl",
+          "login.failure.network.stepDashboard",
+        ],
   });
 }
 
@@ -304,12 +335,16 @@ function renderLoginGate(props: LoginGateProps) {
   const basePath = normalizeBasePath(props.basePath);
   const logoSrc = productAssetPath(undefined, "alpendata-mark.png", basePath);
   const brand = alpenDataLoginTitle(props.product);
+  const employeeSession = isEmployeeLogin(props.shellProfile);
+  const supportHref = props.product.supportUrl ?? "https://www.alpendata.ch/contact";
   const failure = resolveLoginFailureFeedback({
     connected: props.connected,
     lastError: props.lastError,
     lastErrorCode: props.lastErrorCode,
     hasToken: props.hasToken,
     hasPassword: props.hasPassword,
+    employeeSession,
+    supportHref,
   });
 
   return html`
@@ -326,121 +361,143 @@ function renderLoginGate(props: LoginGateProps) {
           <div class="login-gate__sub">${t("login.subtitle")}</div>
         </div>
         <div class="login-gate__form">
-          <label class="field">
-            <span>${t("overview.access.wsUrl")}</span>
-            <input
-              inputmode="url"
-              autocapitalize="none"
-              autocorrect="off"
-              autocomplete="off"
-              spellcheck="false"
-              enterkeyhint="go"
-              .value=${props.gatewayUrl}
-              @input=${(e: Event) => {
-                props.onGatewayUrlChange((e.target as HTMLInputElement).value);
-              }}
-              @keydown=${(e: KeyboardEvent) => {
-                if (e.key === "Enter") {
-                  props.onConnect();
-                }
-              }}
-              placeholder="ws://127.0.0.1:18789"
-            />
-          </label>
-          <label class="field">
-            <span>${t("overview.access.token")}</span>
-            <div class="login-gate__secret-row">
-              <input
-                type=${props.showGatewayToken ? "text" : "password"}
-                autocomplete="off"
-                spellcheck="false"
-                enterkeyhint="go"
-                .value=${props.token}
-                @input=${(e: Event) => {
-                  props.onTokenChange((e.target as HTMLInputElement).value);
-                }}
-                placeholder="OPENCLAW_GATEWAY_TOKEN (${t("login.passwordPlaceholder")})"
-                @keydown=${(e: KeyboardEvent) => {
-                  if (e.key === "Enter") {
-                    props.onConnect();
-                  }
-                }}
-              />
-              <openclaw-tooltip
-                .content=${props.showGatewayToken ? t("login.hideToken") : t("login.showToken")}
-              >
-                <button
-                  type="button"
-                  class="btn btn--icon ${props.showGatewayToken ? "active" : ""}"
-                  aria-label=${t("login.toggleTokenVisibility")}
-                  aria-pressed=${props.showGatewayToken}
-                  @click=${props.onToggleGatewayToken}
-                >
-                  ${props.showGatewayToken ? icons.eye : icons.eyeOff}
-                </button>
-              </openclaw-tooltip>
-            </div>
-          </label>
-          <label class="field">
-            <span>${t("overview.access.password")}</span>
-            <div class="login-gate__secret-row">
-              <input
-                type=${props.showGatewayPassword ? "text" : "password"}
-                autocomplete="off"
-                spellcheck="false"
-                enterkeyhint="go"
-                .value=${props.password}
-                @input=${(e: Event) => {
-                  props.onPasswordChange((e.target as HTMLInputElement).value);
-                }}
-                placeholder="${t("login.passwordPlaceholder")}"
-                @keydown=${(e: KeyboardEvent) => {
-                  if (e.key === "Enter") {
-                    props.onConnect();
-                  }
-                }}
-              />
-              <openclaw-tooltip
-                .content=${props.showGatewayPassword
-                  ? t("login.hidePassword")
-                  : t("login.showPassword")}
-              >
-                <button
-                  type="button"
-                  class="btn btn--icon ${props.showGatewayPassword ? "active" : ""}"
-                  aria-label=${t("login.togglePasswordVisibility")}
-                  aria-pressed=${props.showGatewayPassword}
-                  @click=${props.onToggleGatewayPassword}
-                >
-                  ${props.showGatewayPassword ? icons.eye : icons.eyeOff}
-                </button>
-              </openclaw-tooltip>
-            </div>
-          </label>
+          ${employeeSession
+            ? nothing
+            : html`
+                <label class="field">
+                  <span>${t("overview.access.wsUrl")}</span>
+                  <input
+                    inputmode="url"
+                    autocapitalize="none"
+                    autocorrect="off"
+                    autocomplete="off"
+                    spellcheck="false"
+                    enterkeyhint="go"
+                    .value=${props.gatewayUrl}
+                    @input=${(e: Event) => {
+                      props.onGatewayUrlChange((e.target as HTMLInputElement).value);
+                    }}
+                    @keydown=${(e: KeyboardEvent) => {
+                      if (e.key === "Enter") {
+                        props.onConnect();
+                      }
+                    }}
+                    placeholder="ws://127.0.0.1:18789"
+                  />
+                </label>
+                <label class="field">
+                  <span>${t("overview.access.token")}</span>
+                  <div class="login-gate__secret-row">
+                    <input
+                      type=${props.showGatewayToken ? "text" : "password"}
+                      autocomplete="off"
+                      spellcheck="false"
+                      enterkeyhint="go"
+                      .value=${props.token}
+                      @input=${(e: Event) => {
+                        props.onTokenChange((e.target as HTMLInputElement).value);
+                      }}
+                      placeholder="OPENCLAW_GATEWAY_TOKEN (${t("login.passwordPlaceholder")})"
+                      @keydown=${(e: KeyboardEvent) => {
+                        if (e.key === "Enter") {
+                          props.onConnect();
+                        }
+                      }}
+                    />
+                    <openclaw-tooltip
+                      .content=${props.showGatewayToken
+                        ? t("login.hideToken")
+                        : t("login.showToken")}
+                    >
+                      <button
+                        type="button"
+                        class="btn btn--icon ${props.showGatewayToken ? "active" : ""}"
+                        aria-label=${t("login.toggleTokenVisibility")}
+                        aria-pressed=${props.showGatewayToken}
+                        @click=${props.onToggleGatewayToken}
+                      >
+                        ${props.showGatewayToken ? icons.eye : icons.eyeOff}
+                      </button>
+                    </openclaw-tooltip>
+                  </div>
+                </label>
+                <label class="field">
+                  <span>${t("overview.access.password")}</span>
+                  <div class="login-gate__secret-row">
+                    <input
+                      type=${props.showGatewayPassword ? "text" : "password"}
+                      autocomplete="off"
+                      spellcheck="false"
+                      enterkeyhint="go"
+                      .value=${props.password}
+                      @input=${(e: Event) => {
+                        props.onPasswordChange((e.target as HTMLInputElement).value);
+                      }}
+                      placeholder="${t("login.passwordPlaceholder")}"
+                      @keydown=${(e: KeyboardEvent) => {
+                        if (e.key === "Enter") {
+                          props.onConnect();
+                        }
+                      }}
+                    />
+                    <openclaw-tooltip
+                      .content=${props.showGatewayPassword
+                        ? t("login.hidePassword")
+                        : t("login.showPassword")}
+                    >
+                      <button
+                        type="button"
+                        class="btn btn--icon ${props.showGatewayPassword ? "active" : ""}"
+                        aria-label=${t("login.togglePasswordVisibility")}
+                        aria-pressed=${props.showGatewayPassword}
+                        @click=${props.onToggleGatewayPassword}
+                      >
+                        ${props.showGatewayPassword ? icons.eye : icons.eyeOff}
+                      </button>
+                    </openclaw-tooltip>
+                  </div>
+                </label>
+              `}
           <button class="btn primary login-gate__connect" @click=${props.onConnect}>
-            ${t("common.connect")}
+            ${employeeSession ? t("login.employee.retry") : t("common.connect")}
           </button>
         </div>
         ${failure ? renderLoginFailure(failure) : ""}
-        <details class="login-gate__help">
-          <summary class="login-gate__help-title">${t("overview.connection.title")}</summary>
-          <ol class="login-gate__steps">
-            <li>
-              ${t("overview.connection.step1")}${renderConnectCommand("openclaw gateway run")}
-            </li>
-            <li>${t("overview.connection.step2")} ${renderConnectCommand("openclaw dashboard")}</li>
-            <li>${t("overview.connection.step3")}</li>
-          </ol>
-          <div class="login-gate__docs">
-            <a
-              class="session-link"
-              href="https://docs.openclaw.ai/web/dashboard"
-              target="_blank"
-              rel="noreferrer"
-              >${t("overview.connection.docsLink")}</a
-            >
-          </div>
-        </details>
+        ${employeeSession
+          ? html`
+              <div class="login-gate__docs">
+                <a
+                  class="session-link"
+                  href=${supportHref}
+                  target=${EXTERNAL_LINK_TARGET}
+                  rel=${buildExternalLinkRel()}
+                  >${t("login.failure.docsSupport")}</a
+                >
+              </div>
+            `
+          : html`
+              <details class="login-gate__help">
+                <summary class="login-gate__help-title">${t("overview.connection.title")}</summary>
+                <ol class="login-gate__steps">
+                  <li>
+                    ${t("overview.connection.step1")}${renderConnectCommand("openclaw gateway run")}
+                  </li>
+                  <li>
+                    ${t("overview.connection.step2")} ${renderConnectCommand("openclaw dashboard")}
+                  </li>
+                  <li>${t("overview.connection.step3")}</li>
+                </ol>
+                <div class="login-gate__docs">
+                  <a
+                    class="session-link"
+                    href="https://docs.openclaw.ai/web/dashboard"
+                    target="_blank"
+                    rel="noreferrer"
+                    >${t("overview.connection.docsLink")}</a
+                  >
+                </div>
+              </details>
+            `}
       </div>
     </div>
   `;

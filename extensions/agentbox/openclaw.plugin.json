@@ -1,7 +1,7 @@
 {
   "id": "agentbox",
   "name": "AlpenData AgentBox",
-  "description": "Synchronize business documents from Microsoft 365, Google Drive, WebDAV, and local folders into an isolated RAGFlow dataset.",
+  "description": "Synchronize business documents from Microsoft 365, Google Drive, and Infomaniak kDrive into an isolated RAGFlow dataset.",
   "enabledByDefault": false,
   "activation": {
     "onStartup": true
@@ -78,7 +78,10 @@
             "driveId": { "type": "string" },
             "baseUrl": { "type": "string" },
             "rootPath": { "type": "string" },
-            "accessTokenEnv": { "type": "string" },
+            "entraTenantIdEnv": { "type": "string" },
+            "clientIdEnv": { "type": "string" },
+            "clientSecretEnv": { "type": "string" },
+            "refreshTokenEnv": { "type": "string" },
             "usernameEnv": { "type": "string" },
             "passwordEnv": { "type": "string" },
             "allowPrivateNetwork": { "type": "boolean" }

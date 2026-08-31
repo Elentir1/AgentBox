@@ -1464,11 +1464,30 @@ export const ja_JP: TranslationMap = {
     showPassword: "パスワードを表示",
     hidePassword: "パスワードを非表示",
     togglePasswordVisibility: "パスワードの表示/非表示を切り替え",
+    employee: {
+      retry: "再試行",
+    },
     failure: {
       rawError: "生のエラー",
       docsAuth: "Control UI 認証ドキュメント",
       docsPairing: "デバイスペアリングのドキュメント",
       docsInsecure: "安全でない HTTP のドキュメント",
+      docsSupport: "AlpenData に連絡",
+      employee: {
+        title: "会社のアカウントでサインイン",
+        summary:
+          "この AgentBox は会社の ID を使います。会社ポータルからアシスタントを開くか、セッションの期限が切れた場合は AlpenData に連絡してください。",
+        stepCompany: "会社の ID プロバイダーでもう一度サインインしてください。",
+        stepPortal: "管理者が渡した会社のリンクから AgentBox を開いてください。",
+        stepSupport: "接続できない場合は AlpenData に連絡してください。",
+        network: {
+          title: "AgentBox に接続できません",
+          summary:
+            "このブラウザからアシスタントに到達できません。会社ポータルから再試行し、続く場合は AlpenData に連絡してください。",
+          stepPortal: "会社ポータルまたはブックマークから AgentBox を再読み込みしてください。",
+          stepSupport: "障害が続く場合は AlpenData に連絡してください。",
+        },
+      },
       authRequired: {
         title: "認証が必要です",
         summary:

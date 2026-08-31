@@ -1462,11 +1462,30 @@ export const nl: TranslationMap = {
     showPassword: "Wachtwoord weergeven",
     hidePassword: "Wachtwoord verbergen",
     togglePasswordVisibility: "Wachtwoordzichtbaarheid schakelen",
+    employee: {
+      retry: "Opnieuw proberen",
+    },
     failure: {
       rawError: "Ruwe fout",
       docsAuth: "Control UI-authdocumentatie",
       docsPairing: "Documentatie voor apparaatkoppeling",
       docsInsecure: "Documentatie voor onveilige HTTP",
+      docsSupport: "Contacteer AlpenData",
+      employee: {
+        title: "Meld je aan via je bedrijf",
+        summary:
+          "Deze AgentBox gebruikt de identiteit van je bedrijf. Open de assistent via het bedrijfsportaal of neem contact op met AlpenData als de sessie is verlopen.",
+        stepCompany: "Meld je opnieuw aan via de identiteitsprovider van je bedrijf.",
+        stepPortal: "Open AgentBox via de bedrijfslink die je beheerder gaf.",
+        stepSupport: "Als je nog steeds niet kunt verbinden, neem dan contact op met AlpenData.",
+        network: {
+          title: "AgentBox is niet bereikbaar",
+          summary:
+            "De assistent is vanuit deze browser niet bereikbaar. Probeer opnieuw via het bedrijfsportaal en neem contact op met AlpenData als het blijft mislukken.",
+          stepPortal: "Laad AgentBox opnieuw via het bedrijfsportaal of je bladwijzer.",
+          stepSupport: "Neem contact op met AlpenData als de storing aanhoudt.",
+        },
+      },
       authRequired: {
         title: "Authenticatie vereist",
         summary:

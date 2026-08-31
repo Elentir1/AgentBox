@@ -17,7 +17,9 @@ const microsoftSourceSchema = z
     id: sourceIdSchema,
     type: z.literal("microsoft-365"),
     driveId: z.string().min(1),
-    accessTokenEnv: envNameSchema,
+    entraTenantIdEnv: envNameSchema,
+    clientIdEnv: envNameSchema,
+    clientSecretEnv: envNameSchema,
   })
   .strict();
 
@@ -26,7 +28,9 @@ const googleSourceSchema = z
     id: sourceIdSchema,
     type: z.literal("google-drive"),
     driveId: z.string().min(1).optional(),
-    accessTokenEnv: envNameSchema,
+    clientIdEnv: envNameSchema,
+    clientSecretEnv: envNameSchema,
+    refreshTokenEnv: envNameSchema,
   })
   .strict();
 
@@ -80,7 +84,16 @@ const agentBoxConfigObject = z
         "Source ids must be unique",
       ),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.backend.baseUrl.startsWith("http://") && !value.backend.allowPrivateNetwork) {
+      ctx.addIssue({
+        code: "custom",
+        message: "HTTP RAGFlow backends require allowPrivateNetwork: true",
+        path: ["backend", "allowPrivateNetwork"],
+      });
+    }
+  });
 
 export type AgentBoxConfig = z.infer<typeof agentBoxConfigObject>;
 export type AgentBoxSourceConfig = AgentBoxConfig["sources"][number];
@@ -108,4 +121,8 @@ export function requireConfiguredSecret(envName: string): string {
     throw new Error(`AgentBox requires the ${envName} environment variable.`);
   }
   return value;
+}
+
+export function isTenantScopedDataset(tenantId: string, datasetId: string): boolean {
+  return datasetId === tenantId || datasetId.startsWith(`${tenantId}-`);
 }

@@ -32,6 +32,8 @@ for directory in "$HOST_ROOT" "$STATE_DIR" "$WORKSPACE_DIR" "$SECRETS_DIR/auth-p
   install -d -m 0750 "$directory"
 done
 
+install -m 0644 "$RENDER_DIR/workspace/AGENTS.md" "$WORKSPACE_DIR/AGENTS.md"
+
 RUNTIME_ENV="$SECRETS_DIR/runtime.env"
 if [[ ! -f "$RUNTIME_ENV" ]]; then
   install -m 0600 "$RENDER_DIR/runtime.env.example" "$RUNTIME_ENV"

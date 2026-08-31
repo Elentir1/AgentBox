@@ -1469,11 +1469,30 @@ export const ru: TranslationMap = {
     showPassword: "Показать пароль",
     hidePassword: "Скрыть пароль",
     togglePasswordVisibility: "Переключить видимость пароля",
+    employee: {
+      retry: "Повторить",
+    },
     failure: {
       rawError: "Необработанная ошибка",
       docsAuth: "Документация по аутентификации Control UI",
       docsPairing: "Документация по сопряжению устройства",
       docsInsecure: "Документация по небезопасному HTTP",
+      docsSupport: "Связаться с AlpenData",
+      employee: {
+        title: "Войдите через компанию",
+        summary:
+          "Эта AgentBox использует корпоративную учётную запись. Откройте помощника из корпоративного портала или свяжитесь с AlpenData, если сессия истекла.",
+        stepCompany: "Войдите снова через поставщика удостоверений компании.",
+        stepPortal: "Откройте AgentBox по корпоративной ссылке, которую дал администратор.",
+        stepSupport: "Если подключиться не удаётся, свяжитесь с AlpenData.",
+        network: {
+          title: "Не удалось связаться с AgentBox",
+          summary:
+            "Помощник недоступен из этого браузера. Повторите вход через корпоративный портал и свяжитесь с AlpenData, если ошибка сохраняется.",
+          stepPortal: "Перезагрузите AgentBox из корпоративного портала или закладки.",
+          stepSupport: "Свяжитесь с AlpenData, если сбой продолжается.",
+        },
+      },
       authRequired: {
         title: "Требуется аутентификация",
         summary:

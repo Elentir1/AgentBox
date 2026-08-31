@@ -1,4 +1,4 @@
-import type { AgentBoxConfig } from "./config.js";
+import { isTenantScopedDataset, type AgentBoxConfig } from "./config.js";
 import { RagFlowClient, type AgentBoxSearchResult } from "./ragflow-client.js";
 import { createSourceAdapter, type AgentBoxDocument } from "./sources.js";
 import { digestSearchQuery, type AgentBoxDocumentState, type AgentBoxStateStore } from "./state.js";
@@ -9,7 +9,13 @@ type AgentBoxLogger = {
   error: (message: string) => void;
 };
 
-type AgentBoxDocumentClient = Pick<RagFlowClient, "delete" | "search" | "upload">;
+type AgentBoxDocumentClient = Pick<RagFlowClient, "delete" | "search" | "upload"> &
+  Partial<Pick<RagFlowClient, "inspect">>;
+
+export type AgentBoxBackendStatus = {
+  state: "ready" | "error";
+  error?: string;
+};
 
 export type AgentBoxSourceStatus = {
   id: string;
@@ -29,6 +35,7 @@ export type AgentBoxStatus = {
   syncInProgress: boolean;
   lastSyncStartedAt?: string;
   lastSyncCompletedAt?: string;
+  backend: AgentBoxBackendStatus;
   sources: AgentBoxSourceStatus[];
 };
 
@@ -40,6 +47,10 @@ export class AgentBoxService {
   private running = false;
   private lastSyncStartedAt: string | undefined;
   private lastSyncCompletedAt: string | undefined;
+  private backendStatus: AgentBoxBackendStatus = {
+    state: "error",
+    error: "RAGFlow has not been checked yet.",
+  };
   private readonly createAdapter: typeof createSourceAdapter;
 
   constructor(
@@ -89,8 +100,14 @@ export class AgentBoxService {
       syncInProgress: Boolean(this.syncPromise),
       lastSyncStartedAt: this.lastSyncStartedAt,
       lastSyncCompletedAt: this.lastSyncCompletedAt,
+      backend: { ...this.backendStatus },
       sources: this.sourceStatuses.map((source) => ({ ...source })),
     };
+  }
+
+  async refreshStatus(): Promise<AgentBoxStatus> {
+    this.backendStatus = await this.probeBackend();
+    return this.status();
   }
 
   async search(
@@ -153,6 +170,15 @@ export class AgentBoxService {
 
   private async performSync(): Promise<AgentBoxStatus> {
     this.lastSyncStartedAt = new Date().toISOString();
+    this.backendStatus = await this.probeBackend();
+    if (this.backendStatus.state === "error") {
+      for (const status of this.sourceStatuses) {
+        status.state = "error";
+        status.error = this.backendStatus.error;
+      }
+      this.lastSyncCompletedAt = new Date().toISOString();
+      return this.status();
+    }
     for (const source of this.config.sources) {
       const status = this.sourceStatuses.find((entry) => entry.id === source.id);
       if (!status) {
@@ -270,6 +296,28 @@ export class AgentBoxService {
     this.logger.info(
       `AgentBox source ${sourceId}: ${status.uploaded} uploaded, ${status.deleted} deleted, ${status.skipped} unchanged.`,
     );
+  }
+
+  private async probeBackend(): Promise<AgentBoxBackendStatus> {
+    if (!isTenantScopedDataset(this.config.tenantId, this.config.backend.datasetId)) {
+      return {
+        state: "error",
+        error: `RAGFlow dataset ${this.config.backend.datasetId} is not scoped to tenant ${this.config.tenantId}.`,
+      };
+    }
+    const inspect = this.client.inspect;
+    if (!inspect) {
+      return { state: "ready" };
+    }
+    try {
+      await inspect.call(this.client);
+      return { state: "ready" };
+    } catch (error) {
+      return {
+        state: "error",
+        error: `RAGFlow is unreachable: ${this.errorMessage(error)}`,
+      };
+    }
   }
 
   private errorMessage(error: unknown): string {

@@ -1466,11 +1466,31 @@ export const de: TranslationMap = {
     showPassword: "Passwort anzeigen",
     hidePassword: "Passwort ausblenden",
     togglePasswordVisibility: "Sichtbarkeit des Passworts umschalten",
+    employee: {
+      retry: "Erneut versuchen",
+    },
     failure: {
       rawError: "Rohfehler",
       docsAuth: "Control-UI-Auth-Dokumentation",
       docsPairing: "Dokumentation zur Gerätekopplung",
       docsInsecure: "Dokumentation zu unsicherem HTTP",
+      docsSupport: "AlpenData kontaktieren",
+      employee: {
+        title: "Über Ihr Unternehmen anmelden",
+        summary:
+          "Diese AgentBox verwendet Ihre Unternehmensidentität. Öffnen Sie den Assistenten über das Unternehmensportal oder kontaktieren Sie AlpenData, wenn die Sitzung abgelaufen ist.",
+        stepCompany: "Melden Sie sich erneut über den Identitätsanbieter Ihres Unternehmens an.",
+        stepPortal:
+          "Öffnen Sie AgentBox über den Firmenlink, den Ihnen Ihr Administrator gegeben hat.",
+        stepSupport: "Wenn die Verbindung weiterhin fehlschlägt, kontaktieren Sie AlpenData.",
+        network: {
+          title: "AgentBox nicht erreichbar",
+          summary:
+            "Der Assistent ist in diesem Browser nicht erreichbar. Versuchen Sie erneut das Unternehmensportal und kontaktieren Sie AlpenData, wenn der Fehler bestehen bleibt.",
+          stepPortal: "Laden Sie AgentBox über Ihr Unternehmensportal oder Lesezeichen neu.",
+          stepSupport: "Kontaktieren Sie AlpenData, wenn der Ausfall anhält.",
+        },
+      },
       authRequired: {
         title: "Authentifizierung erforderlich",
         summary:

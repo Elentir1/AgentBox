@@ -9,6 +9,12 @@ import {
 import { z } from "zod";
 import type { AgentBoxSourceConfig } from "./config.js";
 import { requireConfiguredSecret } from "./config.js";
+import {
+  createGoogleRefreshTokenSource,
+  createMicrosoftClientCredentialsSource,
+  fetchWithAccessToken,
+  type AccessTokenSource,
+} from "./oauth.js";
 
 const MAX_SOURCE_ITEMS = 50_000;
 const SUPPORTED_LOCAL_EXTENSIONS = new Set([
@@ -65,13 +71,14 @@ function assertItemLimit(count: number, label: string): void {
 
 async function fetchJson<T>(params: {
   url: string;
-  token: string;
+  tokens: AccessTokenSource;
   schema: z.ZodType<T>;
   label: string;
 }): Promise<T> {
-  const response = await fetch(params.url, {
-    headers: { Authorization: `Bearer ${params.token}`, Accept: "application/json" },
-    signal: AbortSignal.timeout(60_000),
+  const response = await fetchWithAccessToken({
+    url: params.url,
+    tokens: params.tokens,
+    timeoutMs: 60_000,
   });
   assertResponseOk(response, params.label);
   return params.schema.parse(await readProviderJsonResponse(response, params.label));
@@ -99,15 +106,21 @@ const graphPageSchema = z
 function createMicrosoftAdapter(
   source: Extract<AgentBoxSourceConfig, { type: "microsoft-365" }>,
 ): AgentBoxSourceAdapter {
-  const token = requireConfiguredSecret(source.accessTokenEnv);
+  const tokens = createMicrosoftClientCredentialsSource({
+    sourceId: source.id,
+    entraTenantIdEnv: source.entraTenantIdEnv,
+    clientIdEnv: source.clientIdEnv,
+    clientSecretEnv: source.clientSecretEnv,
+  });
   const fetchPage = async (url: string) => {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" || parsed.origin !== "https://graph.microsoft.com") {
       throw new Error(`Microsoft 365 source ${source.id} returned an unsafe pagination URL.`);
     }
-    const response = await fetch(parsed, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      signal: AbortSignal.timeout(60_000),
+    const response = await fetchWithAccessToken({
+      url: parsed,
+      tokens,
+      timeoutMs: 60_000,
     });
     if (response.status === 410) {
       return { resetUrl: response.headers.get("location") };
@@ -120,14 +133,12 @@ function createMicrosoftAdapter(
     };
   };
   const read = async (itemId: string) => {
-    const response = await fetch(
-      `https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(source.driveId)}/items/${encodeURIComponent(itemId)}/content`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        redirect: "follow",
-        signal: AbortSignal.timeout(120_000),
-      },
-    );
+    const response = await fetchWithAccessToken({
+      url: `https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(source.driveId)}/items/${encodeURIComponent(itemId)}/content`,
+      init: { redirect: "follow" },
+      tokens,
+      timeoutMs: 120_000,
+    });
     assertResponseOk(response, `Microsoft 365 download ${itemId}`);
     return new Uint8Array(await response.arrayBuffer());
   };
@@ -249,7 +260,12 @@ function appendGoogleDriveParams(
 function createGoogleAdapter(
   source: Extract<AgentBoxSourceConfig, { type: "google-drive" }>,
 ): AgentBoxSourceAdapter {
-  const token = requireConfiguredSecret(source.accessTokenEnv);
+  const tokens = createGoogleRefreshTokenSource({
+    sourceId: source.id,
+    clientIdEnv: source.clientIdEnv,
+    clientSecretEnv: source.clientSecretEnv,
+    refreshTokenEnv: source.refreshTokenEnv,
+  });
   const read = async (file: z.infer<typeof googleFileSchema>) => {
     const googleNative = file.mimeType.startsWith("application/vnd.google-apps.");
     const url = new URL(
@@ -263,9 +279,10 @@ function createGoogleAdapter(
       url.searchParams.set("alt", "media");
       url.searchParams.set("supportsAllDrives", "true");
     }
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(120_000),
+    const response = await fetchWithAccessToken({
+      url,
+      tokens,
+      timeoutMs: 120_000,
     });
     assertResponseOk(response, `Google Drive download ${file.id}`);
     return new Uint8Array(await response.arrayBuffer());
@@ -308,7 +325,7 @@ function createGoogleAdapter(
           appendGoogleDriveParams(url, source.driveId, { corpus: true, includeItems: true });
           const page = await fetchJson({
             url: url.toString(),
-            token,
+            tokens,
             schema: googleFilePageSchema,
             label: `Google Drive source ${source.id}`,
           });
@@ -320,7 +337,7 @@ function createGoogleAdapter(
         appendGoogleDriveParams(tokenUrl, source.driveId);
         const tokenPayload = await fetchJson({
           url: tokenUrl.toString(),
-          token,
+          tokens,
           schema: googleStartTokenSchema,
           label: `Google Drive source ${source.id}`,
         });
@@ -339,7 +356,7 @@ function createGoogleAdapter(
           appendGoogleDriveParams(url, source.driveId, { includeItems: true });
           const page = await fetchJson({
             url: url.toString(),
-            token,
+            tokens,
             schema: googleChangePageSchema,
             label: `Google Drive source ${source.id}`,
           });
@@ -477,10 +494,13 @@ export function parseWebDavMultiStatus(xml: string): Array<{
 function createWebDavAdapter(
   source: Extract<AgentBoxSourceConfig, { type: "webdav" }>,
 ): AgentBoxSourceAdapter {
+  const base = new URL(source.rootPath, `${source.baseUrl.replace(/\/$/u, "")}/`);
+  if (base.protocol !== "https:") {
+    throw new Error(`WebDAV source ${source.id} requires HTTPS.`);
+  }
   const username = requireConfiguredSecret(source.usernameEnv);
   const password = requireConfiguredSecret(source.passwordEnv);
   const authorization = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
-  const base = new URL(source.rootPath, `${source.baseUrl.replace(/\/$/u, "")}/`);
   const originPolicy = ssrfPolicyFromHttpBaseUrlAllowedOrigin(base.toString());
   if (!originPolicy) {
     throw new Error(`WebDAV source ${source.id} has an invalid base URL.`);

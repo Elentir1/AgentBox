@@ -89,4 +89,30 @@ describe("AgentBox RAGFlow client", () => {
       },
     ]);
   });
+
+  it("reports a reachable configured dataset", async () => {
+    process.env.AGENTBOX_RAGFLOW_KEY = "secret";
+    queueJson({ code: 0, data: { id: "dataset-1" } });
+    const client = new RagFlowClient({
+      baseUrl: "https://ragflow.example.test",
+      datasetId: "dataset-1",
+      apiKeyEnv: "AGENTBOX_RAGFLOW_KEY",
+      allowPrivateNetwork: false,
+    });
+
+    await expect(client.inspect()).resolves.toEqual({ datasetId: "dataset-1" });
+  });
+
+  it("fails closed when RAGFlow returns a different dataset", async () => {
+    process.env.AGENTBOX_RAGFLOW_KEY = "secret";
+    queueJson({ code: 0, data: { id: "other-company" } });
+    const client = new RagFlowClient({
+      baseUrl: "https://ragflow.example.test",
+      datasetId: "dataset-1",
+      apiKeyEnv: "AGENTBOX_RAGFLOW_KEY",
+      allowPrivateNetwork: false,
+    });
+
+    await expect(client.inspect()).rejects.toThrow("does not match");
+  });
 });

@@ -4,13 +4,14 @@ import {
   ensureAgentBoxPolling,
   syncAgentBox,
   type AgentBoxUiSource,
+  type AgentBoxUiStatus,
 } from "./agentbox-controller.ts";
 
 const SOURCE_LABELS: Record<AgentBoxUiSource["type"], string> = {
   "google-drive": "Google Drive",
-  local: "Folders and PDF files",
+  local: "Local folder",
   "microsoft-365": "Microsoft 365",
-  webdav: "Nextcloud / kDrive",
+  webdav: "Infomaniak kDrive",
 };
 
 function statusLabel(source: AgentBoxUiSource): string {
@@ -20,10 +21,22 @@ function statusLabel(source: AgentBoxUiSource): string {
     case "syncing":
       return "Synchronizing";
     case "ready":
-      return `${source.indexed} documents available`;
+      return source.indexed === 0
+        ? "Connected, but no documents are indexed yet"
+        : `${source.indexed} documents available`;
     case "idle":
       return "Waiting for first synchronization";
   }
+}
+
+function backendMessage(status: AgentBoxUiStatus | null): string | null {
+  if (!status) {
+    return null;
+  }
+  if (status.backend?.state === "error") {
+    return status.backend.error || "RAGFlow is unreachable.";
+  }
+  return null;
 }
 
 export function renderAgentBox(props: {
@@ -41,13 +54,9 @@ export function renderAgentBox(props: {
   const status = state.status;
   const sources = status?.sources ?? [];
   const totalDocuments = sources.reduce((sum, source) => sum + source.indexed, 0);
-  const allSourcesReady = sources.length > 0 && sources.every((source) => source.state === "ready");
-  const steps = [
-    { label: "Dedicated AgentBox is running", complete: status?.running === true },
-    { label: "Document sources are connected", complete: sources.length > 0 },
-    { label: "Every source synchronized successfully", complete: allSourcesReady },
-    { label: "Company documents are searchable", complete: totalDocuments > 0 },
-  ];
+  const sourceErrors = sources.filter((source) => source.state === "error");
+  const backendError = backendMessage(status);
+  const visibleError = state.error || backendError;
 
   return html`
     <section class="page">
@@ -56,7 +65,8 @@ export function renderAgentBox(props: {
           <div class="eyebrow">AlpenData AgentBox</div>
           <h1>Company knowledge</h1>
           <p class="muted">
-            Connect, synchronize, and verify the sources available to your employees.
+            Microsoft 365, Google Drive, and Infomaniak kDrive files indexed for this company.
+            Everyone in this AgentBox can search the same corpus.
           </p>
         </div>
         <button
@@ -68,27 +78,51 @@ export function renderAgentBox(props: {
         </button>
       </div>
 
-      ${state.error ? html`<div class="callout danger" role="alert">${state.error}</div>` : nothing}
-
-      <div class="card">
-        <div class="card-title">Activation progress</div>
-        <div class="stack">
-          ${steps.map(
-            (step) => html`
-              <div class="row">
-                <span aria-hidden="true">${step.complete ? "✓" : "○"}</span>
-                <span>${step.label}</span>
-              </div>
-            `,
-          )}
-        </div>
-      </div>
+      ${visibleError
+        ? html`<div class="callout danger" role="alert">${visibleError}</div>`
+        : nothing}
+      ${state.loading && !status
+        ? html`<div class="card"><p class="muted">Checking document sources…</p></div>`
+        : nothing}
+      ${sources.length === 0 && !state.loading && !visibleError
+        ? html`
+            <div class="card">
+              <div class="card-title">No document source configured</div>
+              <p class="muted">
+                Ask AlpenData to connect Microsoft 365, Google Drive, or Infomaniak kDrive for this
+                company. This page stays empty until a live source exists.
+              </p>
+            </div>
+          `
+        : nothing}
+      ${sources.length > 0 && totalDocuments === 0 && sourceErrors.length === 0 && !backendError
+        ? html`
+            <div class="card">
+              <div class="card-title">No documents indexed yet</div>
+              <p class="muted">
+                Sources are configured, but the searchable corpus is still empty. Run
+                synchronization after credentials and RAGFlow are healthy.
+              </p>
+            </div>
+          `
+        : nothing}
+      ${sourceErrors.length > 0
+        ? html`
+            <div class="card">
+              <div class="card-title">Source connection failed</div>
+              <p class="muted">
+                Dead or expired credentials fail closed. AgentBox will not scan with a token that
+                cannot be renewed.
+              </p>
+            </div>
+          `
+        : nothing}
 
       <div class="grid grid-2">
         ${sources.map(
           (source) => html`
             <article class="card">
-              <div class="card-title">${SOURCE_LABELS[source.type]}</div>
+              <div class="card-title">${SOURCE_LABELS[source.type] ?? source.type}</div>
               <div class="card-sub">${source.id}</div>
               <p class=${source.state === "error" ? "text-danger" : "muted"}>
                 ${statusLabel(source)}
@@ -102,18 +136,6 @@ export function renderAgentBox(props: {
           `,
         )}
       </div>
-
-      ${sources.length === 0 && !state.loading
-        ? html`
-            <div class="card">
-              <div class="card-title">No document source configured</div>
-              <p class="muted">
-                Ask your AlpenData administrator to connect Microsoft 365, Google Drive,
-                Nextcloud/kDrive, or a secure document folder.
-              </p>
-            </div>
-          `
-        : nothing}
     </section>
   `;
 }

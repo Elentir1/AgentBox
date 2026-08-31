@@ -1454,11 +1454,30 @@ export const vi: TranslationMap = {
     showPassword: "Hiển thị mật khẩu",
     hidePassword: "Ẩn mật khẩu",
     togglePasswordVisibility: "Bật/tắt hiển thị mật khẩu",
+    employee: {
+      retry: "Thử lại",
+    },
     failure: {
       rawError: "Lỗi thô",
       docsAuth: "Tài liệu xác thực Control UI",
       docsPairing: "Tài liệu ghép đôi thiết bị",
       docsInsecure: "Tài liệu HTTP không an toàn",
+      docsSupport: "Liên hệ AlpenData",
+      employee: {
+        title: "Đăng nhập qua công ty của bạn",
+        summary:
+          "AgentBox này dùng danh tính công ty của bạn. Mở trợ lý từ cổng công ty, hoặc liên hệ AlpenData nếu phiên đã hết hạn.",
+        stepCompany: "Đăng nhập lại qua nhà cung cấp danh tính của công ty.",
+        stepPortal: "Mở AgentBox từ liên kết công ty do quản trị viên cung cấp.",
+        stepSupport: "Nếu vẫn không kết nối được, hãy liên hệ AlpenData.",
+        network: {
+          title: "Không thể kết nối AgentBox",
+          summary:
+            "Không thể truy cập trợ lý từ trình duyệt này. Thử lại từ cổng công ty, rồi liên hệ AlpenData nếu vẫn lỗi.",
+          stepPortal: "Tải lại AgentBox từ cổng công ty hoặc dấu trang.",
+          stepSupport: "Liên hệ AlpenData nếu sự cố tiếp diễn.",
+        },
+      },
       authRequired: {
         title: "Cần xác thực",
         summary:

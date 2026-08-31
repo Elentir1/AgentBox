@@ -25,7 +25,7 @@ export function createAgentBoxSearchTool(getService: () => AgentBoxService | nul
     name: "agentbox_search",
     label: "Search company documents",
     description:
-      "Search the current company's authorized internal documents. Use the returned source labels as citations.",
+      "Search the current company's indexed documents. Cite only the returned documents. If none match, say the company corpus does not contain the answer. Never invent SharePoint, Drive, or kDrive sources.",
     parameters: AgentBoxSearchSchema,
     execute: async (_toolCallId, rawParams) => {
       const params = rawParams as { query: string; maxResults?: number };

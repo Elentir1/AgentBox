@@ -332,6 +332,7 @@ class OpenClawApp extends LitElement {
               onToggleGatewayPassword: () => {
                 this.loginShowGatewayPassword = !this.loginShowGatewayPassword;
               },
+              shellProfile: context.config.current.shellProfile,
               onConnect: () => {
                 this.loginGatePinned = true;
                 context.gateway.connect({
@@ -778,8 +779,7 @@ class OpenClawShell extends LitElement {
           <openclaw-app-sidebar
             .basePath=${context.basePath}
             .productName=${context.config.current.product.name}
-            .productDocsUrl=${context.config.current.product.docsUrl ??
-            "https://www.alpendata.ch/agentbox/docs"}
+            .productDocsUrl=${context.config.current.product.docsUrl ?? ""}
             .activeRouteId=${activeRoute}
             .activePluginTabId=${activePluginTabId}
             .enabledRouteIds=${this.enabledRouteIds()}

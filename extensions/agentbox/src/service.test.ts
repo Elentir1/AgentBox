@@ -183,4 +183,33 @@ describe("AgentBox synchronization", () => {
     expect(events[0]?.queryPreview).toBe("How many leave days?");
     expect(events[0]?.queryDigest).toMatch(/^[a-f0-9]{64}$/u);
   });
+
+  it("fails closed when RAGFlow is unreachable", async () => {
+    const service = new AgentBoxService(
+      localConfig,
+      createStateStore(),
+      { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+      {
+        client: {
+          upload: vi.fn(async () => "unused"),
+          delete: vi.fn(async () => undefined),
+          search: vi.fn(async () => []),
+          inspect: vi.fn(async () => {
+            throw new Error("ECONNREFUSED");
+          }),
+        },
+      },
+    );
+
+    const status = await service.runOnce();
+
+    expect(status.backend).toMatchObject({
+      state: "error",
+      error: expect.stringContaining("RAGFlow is unreachable"),
+    });
+    expect(status.sources[0]).toMatchObject({
+      state: "error",
+      error: expect.stringContaining("RAGFlow is unreachable"),
+    });
+  });
 });

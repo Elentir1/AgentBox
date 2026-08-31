@@ -28,9 +28,7 @@ export const DEFAULT_CONTROL_UI_PRODUCT_BRANDING: ControlUiProductBranding = {
   shortName: "AgentBox",
   logoPath: "/agentbox-logo.svg",
   faviconPath: "/agentbox-favicon.svg",
-  docsUrl: "https://www.alpendata.ch/agentbox/docs",
   supportUrl: "https://www.alpendata.ch/contact",
-  privacyUrl: "https://www.alpendata.ch/privacy",
 };
 
 /** Public GitHub metadata rendered by Control UI link hover cards. */

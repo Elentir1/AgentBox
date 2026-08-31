@@ -18,6 +18,10 @@ export type AgentBoxUiStatus = {
   syncInProgress: boolean;
   lastSyncStartedAt?: string;
   lastSyncCompletedAt?: string;
+  backend?: {
+    state: "ready" | "error";
+    error?: string;
+  };
   sources: AgentBoxUiSource[];
 };
 

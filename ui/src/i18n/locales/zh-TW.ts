@@ -1439,11 +1439,29 @@ export const zh_TW: TranslationMap = {
     showPassword: "顯示密碼",
     hidePassword: "隱藏密碼",
     togglePasswordVisibility: "切換密碼可見性",
+    employee: {
+      retry: "再試一次",
+    },
     failure: {
       rawError: "原始錯誤",
       docsAuth: "Control UI 驗證文件",
       docsPairing: "裝置配對文件",
       docsInsecure: "不安全 HTTP 文件",
+      docsSupport: "聯絡 AlpenData",
+      employee: {
+        title: "透過公司帳號登入",
+        summary:
+          "此 AgentBox 使用公司身分。請從公司入口開啟助手；若工作階段已過期，請聯絡 AlpenData。",
+        stepCompany: "透過公司身分提供者重新登入。",
+        stepPortal: "使用管理員提供的公司連結開啟 AgentBox。",
+        stepSupport: "如果仍無法連線，請聯絡 AlpenData。",
+        network: {
+          title: "無法連線 AgentBox",
+          summary: "此瀏覽器無法連線助手。請從公司入口再試一次，若仍失敗請聯絡 AlpenData。",
+          stepPortal: "從公司入口或書籤重新載入 AgentBox。",
+          stepSupport: "如果中斷持續，請聯絡 AlpenData。",
+        },
+      },
       authRequired: {
         title: "需要驗證",
         summary: "Gateway 可以連線，但此瀏覽器連接前需要相符的權杖或密碼。",
