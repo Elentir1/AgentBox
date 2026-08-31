@@ -167,6 +167,23 @@ describe("AgentBox tenant renderer", () => {
     expect(() => normalizeTenantManifest(proxyWithoutAllowlist)).toThrow("trustedProxies");
   });
 
+  it("keeps token mode as operator CLI access", () => {
+    const manifest = createManifest();
+    manifest.spec.identity = { mode: "token" };
+    const { files } = renderTenantArtifacts(manifest);
+    const batch = JSON.parse(files["openclaw.batch.json"]) as Array<{
+      path: string;
+      value: unknown;
+    }>;
+    const controlUi = batch.find((entry) => entry.path === "gateway.controlUi")?.value as {
+      shellProfile?: string;
+    };
+    const auth = batch.find((entry) => entry.path === "gateway.auth")?.value as { mode?: string };
+
+    expect(controlUi.shellProfile).toBe("full");
+    expect(auth.mode).toBe("token");
+  });
+
   it("keeps two customer manifests on disjoint storage identities", () => {
     const acme = renderTenantArtifacts(createManifest());
     const second = createManifest();

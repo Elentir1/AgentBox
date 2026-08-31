@@ -79,7 +79,8 @@ identity-provider policy. Never copy a scope value supplied by the browser.
 The Gateway intersects the trusted proxy's declared scopes with the scopes
 requested by Control UI. The `shellProfile: auto` setting uses the resulting
 `operator.admin` scope to select the interface, while Gateway method
-authorization remains the enforcement boundary.
+authorization remains the enforcement boundary. Token-mode operator boxes keep
+`shellProfile: full` and the CLI login hints.
 
 Unauthenticated employees see a company-identity retry, not `openclaw dashboard`
 instructions.

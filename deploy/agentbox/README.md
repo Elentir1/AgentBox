@@ -97,7 +97,8 @@ admin:    operator.read,operator.write,operator.admin
 
 AgentBox requires the scope header for trusted-proxy deployments. The Gateway
 intersects it with requested Control UI scopes. `shellProfile: auto` then
-selects the employee or administrator shell.
+selects the employee or administrator shell. Token-mode operator boxes keep
+`shellProfile: full` so AlpenData staff still see CLI login help.
 
 ## Back up
 

@@ -263,7 +263,8 @@ export function renderTenantArtifacts(input) {
       faviconPath: "/agentbox-favicon.svg",
       supportUrl: "https://www.alpendata.ch/contact",
     },
-    shellProfile: "auto",
+    // Employee tenants hide CLI login. Token mode is AlpenData operator access.
+    shellProfile: tenant.identity.mode === "trusted-proxy" ? "auto" : "full",
   };
   const pluginEntry = {
     enabled: true,
