@@ -1,3 +1,9 @@
+"plugin: agentbox":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "extensions/agentbox/**"
+          - "docs/agentbox/**"
+          - "deploy/agentbox/**"
 "plugin: azure-speech":
   - changed-files:
       - any-glob-to-any-file:

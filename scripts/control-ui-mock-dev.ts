@@ -36,7 +36,11 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const uiRoot = path.join(repoRoot, "ui");
 
 function parseArgs(args: string[]): CliOptions {
-  const options: CliOptions = { allowedHosts: [], host: "127.0.0.1", port: 5187 };
+  const options: CliOptions = {
+    allowedHosts: [],
+    host: "127.0.0.1",
+    port: 5187,
+  };
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     if (arg === "--allowed-host") {
@@ -575,14 +579,17 @@ function createMockGatewayPlugin(scenario: ControlUiMockGatewayScenario): Plugin
   const initScript = escapeScriptContent(createControlUiMockGatewayInitScript(scenario));
   const bootstrapBody = JSON.stringify(createControlUiMockBootstrapConfig(scenario));
   return {
+    enforce: "pre",
+    name: "openclaw-control-ui-mock-gateway",
     configureServer(server) {
+      // Register before ui/vite.config.ts control-ui-dev-stubs so the employee
+      // shellProfile and product bootstrap are not replaced by the empty stub.
       server.middlewares.use(CONTROL_UI_BOOTSTRAP_CONFIG_PATH, (_req, res) => {
         res.statusCode = 200;
         res.setHeader("content-type", "application/json");
         res.end(bootstrapBody);
       });
     },
-    name: "openclaw-control-ui-mock-gateway",
     transformIndexHtml(html) {
       return html.replace(
         "</head>",
@@ -638,7 +645,7 @@ const server = await createServer({
   },
   root: uiRoot,
   server: {
-    allowedHosts: options.allowedHosts,
+    allowedHosts: options.allowedHosts.length > 0 ? options.allowedHosts : true,
     host: options.host,
     port: options.port,
     strictPort: true,

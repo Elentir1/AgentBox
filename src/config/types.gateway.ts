@@ -144,6 +144,28 @@ export type GatewayControlUiConfig = {
   allowExternalEmbedUrls?: boolean;
   /** Optional max-width for grouped Control UI chat messages (default: min(900px, 68%)). */
   chatMessageMaxWidth?: string;
+  /** Product identity shown by the hosted Control UI. Technical OpenClaw identifiers stay unchanged. */
+  product?: {
+    /** Full product name used in the document title and authentication screen. */
+    name?: string;
+    /** Compact product name used where space is constrained. */
+    shortName?: string;
+    /** Same-origin path to the product logo. */
+    logoPath?: string;
+    /** Same-origin path to the browser favicon. */
+    faviconPath?: string;
+    /** Public documentation URL shown to operators. */
+    docsUrl?: string;
+    /** Public support URL shown to operators. */
+    supportUrl?: string;
+    /** Public privacy-policy URL shown to operators. */
+    privacyUrl?: string;
+  };
+  /**
+   * Navigation profile for hosted business deployments.
+   * "employee" exposes chat-focused routes; "full" preserves the operator console.
+   */
+  shellProfile?: "auto" | "employee" | "full";
   /** Allowed browser origins for Control UI/WebChat websocket connections. */
   allowedOrigins?: string[];
   /**

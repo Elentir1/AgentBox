@@ -4,6 +4,14 @@
     "target": "OpenClaw"
   },
   {
+    "source": "AlpenData AgentBox",
+    "target": "AlpenData AgentBox"
+  },
+  {
+    "source": "AgentBox",
+    "target": "AgentBox"
+  },
+  {
     "source": "macOS platform notes",
     "target": "macOS 平台说明"
   },

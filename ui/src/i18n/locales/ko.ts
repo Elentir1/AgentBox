@@ -1449,11 +1449,30 @@ export const ko: TranslationMap = {
     showPassword: "비밀번호 표시",
     hidePassword: "비밀번호 숨기기",
     togglePasswordVisibility: "비밀번호 표시 여부 전환",
+    employee: {
+      retry: "다시 시도",
+    },
     failure: {
       rawError: "원시 오류",
       docsAuth: "Control UI 인증 문서",
       docsPairing: "장치 페어링 문서",
       docsInsecure: "안전하지 않은 HTTP 문서",
+      docsSupport: "AlpenData에 문의",
+      employee: {
+        title: "회사를 통해 로그인",
+        summary:
+          "이 AgentBox는 회사 신원을 사용합니다. 회사 포털에서 어시스턴트를 열거나 세션이 만료되면 AlpenData에 문의하세요.",
+        stepCompany: "회사 ID 공급자를 통해 다시 로그인하세요.",
+        stepPortal: "관리자가 제공한 회사 링크에서 AgentBox를 여세요.",
+        stepSupport: "그래도 연결되지 않으면 AlpenData에 문의하세요.",
+        network: {
+          title: "AgentBox에 연결할 수 없음",
+          summary:
+            "이 브라우저에서 어시스턴트에 연결할 수 없습니다. 회사 포털에서 다시 시도한 다음 계속 실패하면 AlpenData에 문의하세요.",
+          stepPortal: "회사 포털 또는 북마크에서 AgentBox를 다시 로드하세요.",
+          stepSupport: "장애가 계속되면 AlpenData에 문의하세요.",
+        },
+      },
       authRequired: {
         title: "인증 필요",
         summary:

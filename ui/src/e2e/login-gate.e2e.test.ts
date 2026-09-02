@@ -1,4 +1,6 @@
 // Control UI tests cover the responsive disconnected login gate.
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ConnectErrorDetailCodes } from "../../../packages/gateway-protocol/src/connect-error-details.js";
@@ -35,6 +37,11 @@ async function mountLoginGate(page: Page): Promise<void> {
     document.body.dataset.connectCount = "0";
     gate.props = {
       basePath: "",
+      product: {
+        name: "AlpenData AgentBox",
+        shortName: "AgentBox",
+        faviconPath: "/alpendata-mark.png",
+      },
       connected: false,
       lastError: "unauthorized: gateway token required",
       lastErrorCode: null,
@@ -99,6 +106,17 @@ describeControlUiE2e("Control UI responsive login gate E2E", () => {
       expect((await failure.textContent())?.toLowerCase()).toContain(
         "supported connection protocol",
       );
+      const artifactDir = path.join(
+        process.cwd(),
+        ".artifacts",
+        "control-ui-e2e",
+        "agentbox-login",
+      );
+      await mkdir(artifactDir, { recursive: true });
+      await page.screenshot({
+        fullPage: true,
+        path: path.join(artifactDir, "login-alpendata.png"),
+      });
       await page.waitForTimeout(1_600);
       expect(await gateway.getRequests("connect")).toHaveLength(1);
     } finally {

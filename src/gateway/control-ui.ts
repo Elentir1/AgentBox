@@ -42,6 +42,7 @@ import {
   CONTROL_UI_BASE_PATH_ATTRIBUTE,
   CONTROL_UI_BOOTSTRAP_CONFIG_PATH,
   CONTROL_UI_TERMINAL_ENABLED_ATTRIBUTE,
+  DEFAULT_CONTROL_UI_PRODUCT_BRANDING,
   type ControlUiBootstrapConfig,
 } from "./control-ui-contract.js";
 import { buildControlUiCspHeader, computeInlineScriptHashes } from "./control-ui-csp.js";
@@ -165,6 +166,9 @@ const STATIC_ASSET_EXTENSIONS = new Set([
 
 const CONTROL_UI_NAMESPACE_PREFIX = "/__openclaw__/";
 const CONTROL_UI_ROOT_PUBLIC_ASSETS = new Set([
+  "agentbox-favicon.ico",
+  "agentbox-favicon.svg",
+  "alpendata-mark.png",
   "apple-touch-icon.png",
   "favicon-32.png",
   "favicon.ico",
@@ -1049,6 +1053,11 @@ export async function handleControlUiHttpRequest(
       allowExternalEmbedUrls: config?.gateway?.controlUi?.allowExternalEmbedUrls === true,
       chatMessageMaxWidth: config?.gateway?.controlUi?.chatMessageMaxWidth,
       seamColor: config?.ui?.seamColor,
+      product: {
+        ...DEFAULT_CONTROL_UI_PRODUCT_BRANDING,
+        ...config?.gateway?.controlUi?.product,
+      },
+      shellProfile: config?.gateway?.controlUi?.shellProfile,
       timeFormat: config?.agents?.defaults?.timeFormat,
       terminalEnabled,
     } satisfies ControlUiBootstrapConfig);

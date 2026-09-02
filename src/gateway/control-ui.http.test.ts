@@ -48,6 +48,8 @@ describe("handleControlUiHttpRequest", () => {
       localMediaPreviewRoots?: string[];
       chatMessageMaxWidth?: string;
       seamColor?: string;
+      product?: { name?: string; shortName?: string };
+      shellProfile?: "auto" | "employee" | "full";
       timeFormat?: "auto" | "12" | "24";
       terminalEnabled: boolean;
     };
@@ -942,7 +944,13 @@ describe("handleControlUiHttpRequest", () => {
             root: { kind: "resolved", path: tmp },
             config: {
               agents: { defaults: { workspace: tmp, timeFormat: "24" } },
-              gateway: { controlUi: { chatMessageMaxWidth: "min(1280px, 82%)" } },
+              gateway: {
+                controlUi: {
+                  chatMessageMaxWidth: "min(1280px, 82%)",
+                  product: { name: "Customer AgentBox", shortName: "AgentBox" },
+                  shellProfile: "employee",
+                },
+              },
               ui: {
                 seamColor: "#1A2b3C",
                 assistant: { name: "</script><script>alert(1)//", avatar: "</script>.png" },
@@ -958,6 +966,10 @@ describe("handleControlUiHttpRequest", () => {
         expect(parsed.assistantAgentId).toBe("main");
         expect(parsed.chatMessageMaxWidth).toBe("min(1280px, 82%)");
         expect(parsed.seamColor).toBe("#1A2b3C");
+        expect(parsed.product).toEqual(
+          expect.objectContaining({ name: "Customer AgentBox", shortName: "AgentBox" }),
+        );
+        expect(parsed.shellProfile).toBe("employee");
         expect(parsed.timeFormat).toBe("24");
         expect(parsed.terminalEnabled).toBe(false);
         expect(Array.isArray(parsed.localMediaPreviewRoots)).toBe(true);

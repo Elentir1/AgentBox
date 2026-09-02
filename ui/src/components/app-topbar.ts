@@ -18,6 +18,7 @@ class AppTopbar extends LitElement {
   @property({ attribute: false }) routeId?: NavigationRouteId;
   @property({ attribute: false }) basePath = "";
   @property({ attribute: false }) agentLabel = "";
+  @property({ attribute: false }) productName = "AlpenData AgentBox";
   @property({ attribute: false }) navDrawerOpen = false;
   @property({ attribute: false }) navCollapsed = false;
   @property({ attribute: false }) onboarding = false;
@@ -105,6 +106,7 @@ class AppTopbar extends LitElement {
               .routeId=${this.routeId}
               .basePath=${this.basePath}
               .agentLabel=${this.agentLabel}
+              .productName=${this.productName}
               .overviewHref=${this.overviewHref}
               @navigate=${this.handleNavigate}
             ></dashboard-header>

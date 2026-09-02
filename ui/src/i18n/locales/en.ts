@@ -1440,7 +1440,7 @@ export const en: TranslationMap = {
     },
   },
   login: {
-    subtitle: "Gateway Dashboard",
+    subtitle: "Your company documents, one assistant",
     passwordPlaceholder: "optional",
     showToken: "Show token",
     hideToken: "Hide token",
@@ -1448,11 +1448,30 @@ export const en: TranslationMap = {
     showPassword: "Show password",
     hidePassword: "Hide password",
     togglePasswordVisibility: "Toggle password visibility",
+    employee: {
+      retry: "Try again",
+    },
     failure: {
       rawError: "Raw error",
       docsAuth: "Control UI auth docs",
       docsPairing: "Device pairing docs",
       docsInsecure: "Insecure HTTP docs",
+      docsSupport: "Contact AlpenData",
+      employee: {
+        title: "Sign in through your company",
+        summary:
+          "This AgentBox uses your company identity. Open the assistant from your company portal, or contact AlpenData if the session expired.",
+        stepCompany: "Sign in again through your company identity provider.",
+        stepPortal: "Open AgentBox from the company link your administrator gave you.",
+        stepSupport: "If you still cannot connect, contact AlpenData.",
+        network: {
+          title: "Could not reach AgentBox",
+          summary:
+            "The assistant is not reachable from this browser. Try your company portal again, then contact AlpenData if it keeps failing.",
+          stepPortal: "Reload AgentBox from your company portal or bookmark.",
+          stepSupport: "Contact AlpenData if the outage continues.",
+        },
+      },
       authRequired: {
         title: "Auth required",
         summary:

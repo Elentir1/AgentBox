@@ -1438,11 +1438,28 @@ export const zh_CN: TranslationMap = {
     showPassword: "显示密码",
     hidePassword: "隐藏密码",
     togglePasswordVisibility: "切换密码可见性",
+    employee: {
+      retry: "重试",
+    },
     failure: {
       rawError: "原始错误",
       docsAuth: "Control UI 认证文档",
       docsPairing: "设备配对文档",
       docsInsecure: "不安全 HTTP 文档",
+      docsSupport: "联系 AlpenData",
+      employee: {
+        title: "通过公司账号登录",
+        summary: "此 AgentBox 使用公司身份。请从公司门户打开助手；若会话已过期，请联系 AlpenData。",
+        stepCompany: "通过公司身份提供商重新登录。",
+        stepPortal: "使用管理员提供的公司链接打开 AgentBox。",
+        stepSupport: "如果仍无法连接，请联系 AlpenData。",
+        network: {
+          title: "无法访问 AgentBox",
+          summary: "此浏览器无法访问助手。请从公司门户重试，若仍然失败请联系 AlpenData。",
+          stepPortal: "从公司门户或书签重新加载 AgentBox。",
+          stepSupport: "如果中断持续，请联系 AlpenData。",
+        },
+      },
       authRequired: {
         title: "需要认证",
         summary: "Gateway 可以访问，但此浏览器连接前需要匹配的令牌或密码。",

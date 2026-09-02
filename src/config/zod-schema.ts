@@ -1117,6 +1117,19 @@ export const OpenClawSchema = z
                   "Expected a CSS width value such as 960px, 82%, min(1280px, 82%), or calc(100% - 2rem)",
               })
               .optional(),
+            product: z
+              .object({
+                name: z.string().min(1).optional(),
+                shortName: z.string().min(1).optional(),
+                logoPath: z.string().startsWith("/").optional(),
+                faviconPath: z.string().startsWith("/").optional(),
+                docsUrl: z.string().url().optional(),
+                supportUrl: z.string().url().optional(),
+                privacyUrl: z.string().url().optional(),
+              })
+              .strict()
+              .optional(),
+            shellProfile: z.enum(["auto", "employee", "full"]).optional(),
             allowedOrigins: z.array(z.string()).optional(),
             dangerouslyAllowHostHeaderOriginFallback: z.boolean().optional(),
             allowInsecureAuth: z.boolean().optional(),

@@ -1456,11 +1456,30 @@ export const fa: TranslationMap = {
     showPassword: "نمایش گذرواژه",
     hidePassword: "پنهان کردن گذرواژه",
     togglePasswordVisibility: "تغییر نمایش گذرواژه",
+    employee: {
+      retry: "دوباره تلاش کنید",
+    },
     failure: {
       rawError: "خطای خام",
       docsAuth: "مستندات احراز هویت Control UI",
       docsPairing: "مستندات جفت سازی دستگاه",
       docsInsecure: "مستندات HTTP ناامن",
+      docsSupport: "تماس با AlpenData",
+      employee: {
+        title: "از طریق شرکت خود وارد شوید",
+        summary:
+          "این AgentBox از هویت شرکتی شما استفاده می‌کند. دستیار را از درگاه شرکت باز کنید یا اگر نشست منقضی شد با AlpenData تماس بگیرید.",
+        stepCompany: "دوباره از طریق ارائه‌دهنده هویت شرکت خود وارد شوید.",
+        stepPortal: "AgentBox را از پیوندی که مدیر به شما داده باز کنید.",
+        stepSupport: "اگر هنوز وصل نمی‌شوید، با AlpenData تماس بگیرید.",
+        network: {
+          title: "دسترسی به AgentBox ممکن نشد",
+          summary:
+            "دستیار از این مرورگر در دسترس نیست. دوباره از درگاه شرکت تلاش کنید و اگر ادامه داشت با AlpenData تماس بگیرید.",
+          stepPortal: "AgentBox را از درگاه یا نشانک شرکت دوباره بارگذاری کنید.",
+          stepSupport: "اگر قطعی ادامه دارد با AlpenData تماس بگیرید.",
+        },
+      },
       authRequired: {
         title: "احراز هویت لازم است",
         summary:

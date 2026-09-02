@@ -1462,11 +1462,30 @@ export const tr: TranslationMap = {
     showPassword: "Parolayı göster",
     hidePassword: "Parolayı gizle",
     togglePasswordVisibility: "Parola görünürlüğünü değiştir",
+    employee: {
+      retry: "Yeniden dene",
+    },
     failure: {
       rawError: "Ham hata",
       docsAuth: "Control UI kimlik doğrulama belgeleri",
       docsPairing: "Cihaz eşleştirme belgeleri",
       docsInsecure: "Güvensiz HTTP belgeleri",
+      docsSupport: "AlpenData ile iletişim",
+      employee: {
+        title: "Şirketiniz üzerinden oturum açın",
+        summary:
+          "Bu AgentBox şirket kimliğinizi kullanır. Asistanı şirket portalından açın veya oturum sona erdiyse AlpenData ile iletişime geçin.",
+        stepCompany: "Şirketinizin kimlik sağlayıcısı üzerinden yeniden oturum açın.",
+        stepPortal: "Yöneticinizin verdiği şirket bağlantısından AgentBox’ı açın.",
+        stepSupport: "Hâlâ bağlanamıyorsanız AlpenData ile iletişime geçin.",
+        network: {
+          title: "AgentBox’a ulaşılamadı",
+          summary:
+            "Asistana bu tarayıcıdan ulaşılamıyor. Şirket portalından yeniden deneyin, sorun sürerse AlpenData ile iletişime geçin.",
+          stepPortal: "AgentBox’ı şirket portalınızdan veya yer iminden yeniden yükleyin.",
+          stepSupport: "Kesinti sürerse AlpenData ile iletişime geçin.",
+        },
+      },
       authRequired: {
         title: "Kimlik doğrulama gerekli",
         summary:

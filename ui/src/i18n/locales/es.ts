@@ -1464,11 +1464,30 @@ export const es: TranslationMap = {
     showPassword: "Mostrar contraseña",
     hidePassword: "Ocultar contraseña",
     togglePasswordVisibility: "Alternar visibilidad de la contraseña",
+    employee: {
+      retry: "Intentar de nuevo",
+    },
     failure: {
       rawError: "Error sin procesar",
       docsAuth: "Documentación de autenticación de Control UI",
       docsPairing: "Documentación de emparejamiento de dispositivos",
       docsInsecure: "Documentación de HTTP inseguro",
+      docsSupport: "Contactar a AlpenData",
+      employee: {
+        title: "Inicia sesión a través de tu empresa",
+        summary:
+          "Esta AgentBox usa la identidad de tu empresa. Abre el asistente desde el portal de la empresa o contacta a AlpenData si la sesión caducó.",
+        stepCompany: "Vuelve a iniciar sesión a través del proveedor de identidad de tu empresa.",
+        stepPortal: "Abre AgentBox desde el enlace que te dio tu administrador.",
+        stepSupport: "Si aún no puedes conectar, contacta a AlpenData.",
+        network: {
+          title: "No se pudo alcanzar AgentBox",
+          summary:
+            "El asistente no es accesible desde este navegador. Prueba de nuevo el portal de la empresa y contacta a AlpenData si sigue fallando.",
+          stepPortal: "Vuelve a cargar AgentBox desde el portal o el marcador de tu empresa.",
+          stepSupport: "Contacta a AlpenData si la interrupción continúa.",
+        },
+      },
       authRequired: {
         title: "Autenticación requerida",
         summary:

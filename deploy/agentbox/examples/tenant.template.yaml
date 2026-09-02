@@ -1,0 +1,53 @@
+# AlpenData AgentBox tenant template.
+# Replace every <angle-bracket> value before rendering. Do not leave placeholders
+# in a live manifest. The image field is supplied by the AgentBox build pipeline;
+# this file does not publish a container image.
+apiVersion: agentbox.alpendata.ch/v1
+kind: Tenant
+metadata:
+  id: <tenant-id>
+  displayName: <company-name>
+spec:
+  image: <agentbox-image>
+  hostRoot: /var/lib/agentbox/<tenant-id>
+  publicOrigin: https://<customer-assistant-host>
+  gatewayPort: 18789
+  timezone: Europe/Zurich
+  identity:
+    mode: trusted-proxy
+    trustedProxies:
+      - <idp-proxy-address>
+    userHeader: x-forwarded-user
+    requiredHeaders:
+      - x-forwarded-proto
+    allowUsers: []
+  provider:
+    model: openai/gpt-5.5
+    apiKeyEnv: OPENAI_API_KEY
+  documents:
+    backend:
+      baseUrl: https://<ragflow-host>
+      datasetId: <tenant-id>-internal
+      apiKeyEnv: AGENTBOX_RAGFLOW_API_KEY
+      allowPrivateNetwork: false
+    sources:
+      - id: microsoft-365
+        type: microsoft-365
+        driveId: <sharepoint-or-onedrive-drive-id>
+        entraTenantIdEnv: AGENTBOX_MS_TENANT_ID
+        clientIdEnv: AGENTBOX_MS_CLIENT_ID
+        clientSecretEnv: AGENTBOX_MS_CLIENT_SECRET
+      - id: google-drive
+        type: google-drive
+        driveId: <shared-drive-id>
+        clientIdEnv: AGENTBOX_GOOGLE_CLIENT_ID
+        clientSecretEnv: AGENTBOX_GOOGLE_CLIENT_SECRET
+        refreshTokenEnv: AGENTBOX_GOOGLE_REFRESH_TOKEN
+      - id: kdrive
+        type: webdav
+        baseUrl: https://<id>.connect.kdrive.infomaniak.com
+        rootPath: /remote.php/dav/files/<account>
+        usernameEnv: AGENTBOX_KDRIVE_USERNAME
+        passwordEnv: AGENTBOX_KDRIVE_PASSWORD
+  backup:
+    retentionDays: 30

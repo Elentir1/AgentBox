@@ -1470,11 +1470,30 @@ export const fr: TranslationMap = {
     showPassword: "Afficher le mot de passe",
     hidePassword: "Masquer le mot de passe",
     togglePasswordVisibility: "Basculer la visibilité du mot de passe",
+    employee: {
+      retry: "Réessayer",
+    },
     failure: {
       rawError: "Erreur brute",
       docsAuth: "Docs d’authentification Control UI",
       docsPairing: "Docs d’appairage des appareils",
       docsInsecure: "Docs HTTP non sécurisé",
+      docsSupport: "Contacter AlpenData",
+      employee: {
+        title: "Connectez-vous via votre entreprise",
+        summary:
+          "Cette AgentBox utilise l’identité de votre entreprise. Ouvrez l’assistant depuis le portail d’entreprise, ou contactez AlpenData si la session a expiré.",
+        stepCompany: "Reconnectez-vous via le fournisseur d’identité de votre entreprise.",
+        stepPortal: "Ouvrez AgentBox depuis le lien fourni par votre administrateur.",
+        stepSupport: "Si vous ne parvenez toujours pas à vous connecter, contactez AlpenData.",
+        network: {
+          title: "Impossible d’atteindre AgentBox",
+          summary:
+            "L’assistant n’est pas joignable depuis ce navigateur. Réessayez depuis le portail d’entreprise, puis contactez AlpenData si le problème continue.",
+          stepPortal: "Rechargez AgentBox depuis le portail ou le signet de votre entreprise.",
+          stepSupport: "Contactez AlpenData si la panne continue.",
+        },
+      },
       authRequired: {
         title: "Authentification requise",
         summary:

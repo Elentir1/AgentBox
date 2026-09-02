@@ -22,7 +22,7 @@ import {
   type ApplicationContext,
   type ApplicationNavigationOptions,
 } from "../app/context.ts";
-import { controlUiPublicAssetPath } from "../app/public-assets.ts";
+import { productAssetPath } from "../app/product-branding.ts";
 import "./theme-mode-toggle.ts";
 import "./tooltip.ts";
 import type { ThemeMode } from "../app/theme.ts";
@@ -130,6 +130,8 @@ class AppSidebar extends LitElement {
   }
 
   @property({ attribute: false }) basePath = "";
+  @property({ attribute: false }) productName = "AlpenData AgentBox";
+  @property({ attribute: false }) productDocsUrl = "";
   @property({ attribute: false }) activeRouteId?: NavigationRouteId;
   @property({ attribute: false }) activePluginTabId = "";
   @property({ attribute: false }) enabledRouteIds?: readonly NavigationRouteId[];
@@ -1172,12 +1174,28 @@ class AppSidebar extends LitElement {
       : link;
   }
 
-  /** Dynamic plugin tabs stay in More; only stable static route ids can be persisted as pins. */
+  /**
+   * Employee shells hide Settings; company plugin tabs (Company documents) belong
+   * beside Overview. Operator consoles keep dynamic tabs under More so they cannot
+   * be persisted as pins.
+   */
+  private isEmployeeShell(): boolean {
+    return this.isRouteEnabled("plugin") && !this.isRouteEnabled("config");
+  }
+
   private pluginTabs(): GatewayControlUiPluginTab[] {
     const tabs = this.context?.gateway.snapshot.hello?.controlUiTabs ?? [];
     return ["chat", "control", "agent", "settings"].flatMap((group) =>
       tabs.filter((tab) => (tab.group ?? "control") === group),
     );
+  }
+
+  private primaryPluginTabs(): GatewayControlUiPluginTab[] {
+    return this.isEmployeeShell() ? this.pluginTabs() : [];
+  }
+
+  private morePluginTabs(): GatewayControlUiPluginTab[] {
+    return this.isEmployeeShell() ? [] : this.pluginTabs();
   }
 
   private renderPluginTab(tab: GatewayControlUiPluginTab) {
@@ -1565,7 +1583,7 @@ class AppSidebar extends LitElement {
         </button>
         <div class="nav-section__items">
           ${moreRoutes.map((routeId) => this.renderRoute(routeId))}
-          ${this.pluginTabs().map((tab) => this.renderPluginTab(tab))}
+          ${this.morePluginTabs().map((tab) => this.renderPluginTab(tab))}
           <button
             type="button"
             class="nav-item nav-item--action"
@@ -1617,8 +1635,8 @@ class AppSidebar extends LitElement {
              otherwise-empty native titlebar strip instead of a sidebar row. -->
         <img
           class="sidebar-native-brand"
-          src="${controlUiPublicAssetPath("favicon.svg", this.basePath)}"
-          alt="OpenClaw"
+          src="${productAssetPath(undefined, "alpendata-mark.png", this.basePath)}"
+          alt=${this.productName}
         />
         <div class="sidebar-shell">
           <div class="sidebar-shell__body">
@@ -1627,6 +1645,7 @@ class AppSidebar extends LitElement {
               ${this.collapsed ? this.renderRoute("chat") : nothing}
               <div class="nav-section__items">
                 ${this.sidebarPinnedRoutes.map((routeId) => this.renderRoute(routeId))}
+                ${this.primaryPluginTabs().map((tab) => this.renderPluginTab(tab))}
               </div>
               ${this.renderMoreSection()}
             </nav>
@@ -1645,41 +1664,52 @@ class AppSidebar extends LitElement {
                 ></span>
               </openclaw-tooltip>
               <span class="sidebar-footer-bar__spacer"></span>
-              <openclaw-tooltip .content=${titleForRoute("config")}>
-                <a
-                  href=${pathForRoute("config", this.basePath)}
-                  class="sidebar-footer-icon ${settingsActive ? "sidebar-footer-icon--active" : ""}"
-                  aria-label=${titleForRoute("config")}
-                  aria-current=${settingsActive ? "page" : nothing}
-                  @focus=${(event: Event) => this.preloadRoute("config", event)}
-                  @blur=${this.cancelPreload}
-                  @pointerenter=${(event: Event) => this.preloadRoute("config", event)}
-                  @pointerleave=${this.cancelPreload}
-                  @touchstart=${(event: TouchEvent) => this.preloadRoute("config", event, true)}
-                  @click=${(event: MouseEvent) => {
-                    if (!shouldHandleNavigationClick(event)) {
-                      return;
-                    }
-                    event.preventDefault();
-                    this.onNavigate?.("config");
-                  }}
-                >
-                  ${icons.settings}
-                </a>
-              </openclaw-tooltip>
-              <openclaw-tooltip
-                .content=${t("chat.docsOpensInNewTab", { label: t("common.docs") })}
-              >
-                <a
-                  class="sidebar-footer-icon"
-                  href="https://docs.openclaw.ai"
-                  target=${EXTERNAL_LINK_TARGET}
-                  rel=${buildExternalLinkRel()}
-                  aria-label=${t("common.docs")}
-                >
-                  ${icons.book}
-                </a>
-              </openclaw-tooltip>
+              ${this.isRouteEnabled("config")
+                ? html`
+                    <openclaw-tooltip .content=${titleForRoute("config")}>
+                      <a
+                        href=${pathForRoute("config", this.basePath)}
+                        class="sidebar-footer-icon ${settingsActive
+                          ? "sidebar-footer-icon--active"
+                          : ""}"
+                        aria-label=${titleForRoute("config")}
+                        aria-current=${settingsActive ? "page" : nothing}
+                        @focus=${(event: Event) => this.preloadRoute("config", event)}
+                        @blur=${this.cancelPreload}
+                        @pointerenter=${(event: Event) => this.preloadRoute("config", event)}
+                        @pointerleave=${this.cancelPreload}
+                        @touchstart=${(event: TouchEvent) =>
+                          this.preloadRoute("config", event, true)}
+                        @click=${(event: MouseEvent) => {
+                          if (!shouldHandleNavigationClick(event)) {
+                            return;
+                          }
+                          event.preventDefault();
+                          this.onNavigate?.("config");
+                        }}
+                      >
+                        ${icons.settings}
+                      </a>
+                    </openclaw-tooltip>
+                  `
+                : nothing}
+              ${this.productDocsUrl.startsWith("https://")
+                ? html`
+                    <openclaw-tooltip
+                      .content=${t("chat.docsOpensInNewTab", { label: t("common.docs") })}
+                    >
+                      <a
+                        class="sidebar-footer-icon"
+                        href=${this.productDocsUrl}
+                        target=${EXTERNAL_LINK_TARGET}
+                        rel=${buildExternalLinkRel()}
+                        aria-label=${t("common.docs")}
+                      >
+                        ${icons.book}
+                      </a>
+                    </openclaw-tooltip>
+                  `
+                : nothing}
               <openclaw-tooltip
                 .content=${this.canPairDevice
                   ? t("nodes.pairing.button")

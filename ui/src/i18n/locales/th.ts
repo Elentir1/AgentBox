@@ -1440,11 +1440,29 @@ export const th: TranslationMap = {
     showPassword: "แสดงรหัสผ่าน",
     hidePassword: "ซ่อนรหัสผ่าน",
     togglePasswordVisibility: "สลับการแสดงรหัสผ่าน",
+    employee: {
+      retry: "ลองอีกครั้ง",
+    },
     failure: {
       rawError: "ข้อผิดพลาดดิบ",
       docsAuth: "เอกสารการยืนยันตัวตนของ Control UI",
       docsPairing: "เอกสารการจับคู่อุปกรณ์",
       docsInsecure: "เอกสาร HTTP ที่ไม่ปลอดภัย",
+      docsSupport: "ติดต่อ AlpenData",
+      employee: {
+        title: "ลงชื่อเข้าใช้ผ่านบริษัทของคุณ",
+        summary:
+          "AgentBox นี้ใช้ข้อมูลระบุตัวตนของบริษัท คุณ เปิดผู้ช่วยจากพอร์ทัลบริษัท หรือติดต่อ AlpenData หากเซสชันหมดอายุ",
+        stepCompany: "ลงชื่อเข้าใช้อีกครั้งผ่านผู้ให้บริการข้อมูลระบุตัวตนของบริษัท",
+        stepPortal: "เปิด AgentBox จากลิงก์บริษัทที่ผู้ดูแลระบบให้มา",
+        stepSupport: "หากยังเชื่อมต่อไม่ได้ ให้ติดต่อ AlpenData",
+        network: {
+          title: "เข้าถึง AgentBox ไม่ได้",
+          summary: "ผู้ช่วยเข้าไม่ถึงจากเบราว์เซอร์นี้ ลองอีกครั้งจากพอร์ทัลบริษัท แล้วติดต่อ AlpenData หากยังล้มเหลว",
+          stepPortal: "โหลด AgentBox ใหม่จากพอร์ทัลบริษัทหรือบุ๊กมาร์ก",
+          stepSupport: "ติดต่อ AlpenData หากยังขัดข้อง",
+        },
+      },
       authRequired: {
         title: "ต้องยืนยันตัวตน",
         summary: "เข้าถึง Gateway ได้ แต่ต้องมีโทเค็นหรือรหัสผ่านที่ตรงกันก่อนที่เบราว์เซอร์นี้จะเชื่อมต่อได้",

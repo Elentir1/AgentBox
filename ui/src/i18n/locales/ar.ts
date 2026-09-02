@@ -1447,11 +1447,30 @@ export const ar: TranslationMap = {
     showPassword: "إظهار كلمة المرور",
     hidePassword: "إخفاء كلمة المرور",
     togglePasswordVisibility: "تبديل ظهور كلمة المرور",
+    employee: {
+      retry: "حاول مرة أخرى",
+    },
     failure: {
       rawError: "الخطأ الخام",
       docsAuth: "وثائق مصادقة Control UI",
       docsPairing: "وثائق إقران الجهاز",
       docsInsecure: "وثائق HTTP غير الآمن",
+      docsSupport: "تواصل مع AlpenData",
+      employee: {
+        title: "سجّل الدخول عبر شركتك",
+        summary:
+          "يستخدم AgentBox هوية شركتك. افتح المساعد من بوابة الشركة، أو تواصل مع AlpenData إذا انتهت الجلسة.",
+        stepCompany: "سجّل الدخول مرة أخرى عبر موفر هوية شركتك.",
+        stepPortal: "افتح AgentBox من الرابط الذي أعطاك إياه المسؤول.",
+        stepSupport: "إذا تعذر الاتصال، تواصل مع AlpenData.",
+        network: {
+          title: "تعذر الوصول إلى AgentBox",
+          summary:
+            "المساعد غير متاح من هذا المتصفح. أعد المحاولة من بوابة الشركة، ثم تواصل مع AlpenData إذا استمر العطل.",
+          stepPortal: "أعد تحميل AgentBox من بوابة شركتك أو الإشارة المرجعية.",
+          stepSupport: "تواصل مع AlpenData إذا استمر الانقطاع.",
+        },
+      },
       authRequired: {
         title: "المصادقة مطلوبة",
         summary:

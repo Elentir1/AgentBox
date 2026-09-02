@@ -89,8 +89,13 @@ function getPaletteBaseItems(): PaletteItem[] {
   ];
 }
 
-function getPaletteItemsInternal(): PaletteItem[] {
-  return getPaletteBaseItems();
+function getPaletteItemsInternal(enabledRouteIds: readonly RouteId[]): PaletteItem[] {
+  return getPaletteBaseItems().filter((item) => {
+    if (!item.action.startsWith("nav:")) {
+      return true;
+    }
+    return enabledRouteIds.includes(item.action.slice("nav:".length) as RouteId);
+  });
 }
 
 type CommandPaletteProps = {
@@ -98,6 +103,7 @@ type CommandPaletteProps = {
   query: string;
   activeIndex: number;
   sessionItems: readonly PaletteItem[];
+  enabledRouteIds: readonly RouteId[];
   onToggle: () => void;
   onQueryChange: (query: string) => void;
   onActiveIndexChange: (index: number) => void;
@@ -110,8 +116,9 @@ function filteredItems(
   query: string,
   includeSlashCommands = true,
   sessionItems: readonly PaletteItem[] = [],
+  enabledRouteIds: readonly RouteId[] = [],
 ): PaletteItem[] {
-  const items = getPaletteItemsInternal().filter(
+  const items = getPaletteItemsInternal(enabledRouteIds).filter(
     (item) => includeSlashCommands || item.category !== "search",
   );
   if (!query) {
@@ -237,7 +244,12 @@ function handleKeydown(e: KeyboardEvent, props: CommandPaletteProps) {
     return;
   }
 
-  const items = filteredItems(props.query, Boolean(props.onSlashCommand), props.sessionItems);
+  const items = filteredItems(
+    props.query,
+    Boolean(props.onSlashCommand),
+    props.sessionItems,
+    props.enabledRouteIds,
+  );
   if (items.length === 0 && (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter")) {
     return;
   }
@@ -326,7 +338,12 @@ function renderCommandPalette(props: CommandPaletteProps) {
   if (!props.open) {
     return nothing;
   }
-  const items = filteredItems(props.query, Boolean(props.onSlashCommand), props.sessionItems);
+  const items = filteredItems(
+    props.query,
+    Boolean(props.onSlashCommand),
+    props.sessionItems,
+    props.enabledRouteIds,
+  );
   const grouped = groupItems(items);
   const activeItem = items[props.activeIndex];
   const activeOptionId = activeItem ? getOptionId(activeItem) : nothing;
@@ -428,6 +445,7 @@ export class CommandPalette extends LitElement {
   @property({ attribute: false }) onNavigate?: (routeId: RouteId) => void;
   @property({ attribute: false }) onSelectSession?: (sessionKey: string) => void;
   @property({ attribute: false }) onSlashCommand?: (command: string) => void;
+  @property({ attribute: false }) enabledRouteIds: readonly RouteId[] = [];
   @consume({ context: applicationContext, subscribe: false })
   private context?: ApplicationContext<RouteId>;
   @state() private open = false;
@@ -582,6 +600,7 @@ export class CommandPalette extends LitElement {
       query: this.query,
       activeIndex: this.activeIndex,
       sessionItems: this.sessionItems,
+      enabledRouteIds: this.enabledRouteIds,
       onToggle: this.togglePalette,
       onQueryChange: (query) => {
         this.query = query;

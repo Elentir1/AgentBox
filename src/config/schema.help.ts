@@ -577,6 +577,23 @@ export const FIELD_HELP: Record<string, string> = {
     "DANGEROUS toggle that allows hosted embeds to load absolute external http(s) URLs. Keep this off unless your Control UI intentionally embeds trusted third-party pages; hosted /__openclaw__/canvas and /__openclaw__/a2ui documents do not need it.",
   "gateway.controlUi.chatMessageMaxWidth":
     'Optional CSS max-width for grouped Control UI chat messages, for example "960px", "82%", or "min(1280px, 82%)". Values are validated against a constrained width grammar before reaching the browser.',
+  "gateway.controlUi.product":
+    "Optional customer-facing product identity for managed Control UI deployments. Technical OpenClaw package, protocol, and plugin identifiers remain unchanged.",
+  "gateway.controlUi.product.name":
+    "Full product name displayed in the browser title and authentication screen.",
+  "gateway.controlUi.product.shortName":
+    "Compact product name used by space-constrained Control UI surfaces.",
+  "gateway.controlUi.product.logoPath":
+    "Same-origin absolute path to the product logo served from the configured Control UI root.",
+  "gateway.controlUi.product.faviconPath":
+    "Same-origin absolute path to the browser favicon served from the configured Control UI root.",
+  "gateway.controlUi.product.docsUrl":
+    "Public HTTPS URL for customer-facing product documentation.",
+  "gateway.controlUi.product.supportUrl":
+    "Public HTTPS URL where customers can request product support.",
+  "gateway.controlUi.product.privacyUrl": "Public HTTPS URL for the product privacy policy.",
+  "gateway.controlUi.shellProfile":
+    'Control UI navigation profile. "auto" derives the employee or full console from operator.admin scope, "employee" limits navigation to chat-focused routes, and "full" preserves the complete operator console.',
   "gateway.controlUi.allowedOrigins":
     'Allowed browser origins for Control UI/WebChat websocket connections (full origins only, e.g. https://control.example.com). Required for non-loopback Control UI deployments unless dangerous Host-header fallback is explicitly enabled. Setting ["*"] means allow any browser origin and should be avoided outside tightly controlled local testing.',
   "gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback":

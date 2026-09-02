@@ -576,13 +576,6 @@
       "text": "Web"
     },
     {
-      "count": 2,
-      "kind": "html-text",
-      "name": "text",
-      "path": "ui/src/components/dashboard-header.ts",
-      "text": "OpenClaw"
-    },
-    {
       "count": 1,
       "kind": "html-text",
       "name": "text",
@@ -657,7 +650,14 @@
       "kind": "html-text",
       "name": "text",
       "path": "ui/src/components/login-gate.ts",
-      "text": "OpenClaw"
+      "text": "Alpen"
+    },
+    {
+      "count": 1,
+      "kind": "html-text",
+      "name": "text",
+      "path": "ui/src/components/login-gate.ts",
+      "text": "Data"
     },
     {
       "count": 1,
@@ -4305,6 +4305,76 @@
       "name": "placeholder",
       "path": "ui/src/pages/overview/view.ts",
       "text": "ws://100.x.y.z:18789"
+    },
+    {
+      "count": 1,
+      "kind": "html-text",
+      "name": "text",
+      "path": "ui/src/pages/plugin/agentbox-view.ts",
+      "text": "AlpenData AgentBox"
+    },
+    {
+      "count": 1,
+      "kind": "html-text",
+      "name": "text",
+      "path": "ui/src/pages/plugin/agentbox-view.ts",
+      "text": "Ask AlpenData to connect Microsoft 365, Google Drive, or Infomaniak kDrive for this company. This page stays empty until a live source exists."
+    },
+    {
+      "count": 1,
+      "kind": "html-text",
+      "name": "text",
+      "path": "ui/src/pages/plugin/agentbox-view.ts",
+      "text": "Checking document sources…"
+    },
+    {
+      "count": 1,
+      "kind": "html-text",
+      "name": "text",
+      "path": "ui/src/pages/plugin/agentbox-view.ts",
+      "text": "Company knowledge"
+    },
+    {
+      "count": 1,
+      "kind": "html-text",
+      "name": "text",
+      "path": "ui/src/pages/plugin/agentbox-view.ts",
+      "text": "Dead or expired credentials fail closed. AgentBox will not scan with a token that cannot be renewed."
+    },
+    {
+      "count": 1,
+      "kind": "html-text",
+      "name": "text",
+      "path": "ui/src/pages/plugin/agentbox-view.ts",
+      "text": "Microsoft 365, Google Drive, and Infomaniak kDrive files indexed for this company. Everyone in this AgentBox can search the same corpus."
+    },
+    {
+      "count": 1,
+      "kind": "html-text",
+      "name": "text",
+      "path": "ui/src/pages/plugin/agentbox-view.ts",
+      "text": "No document source configured"
+    },
+    {
+      "count": 1,
+      "kind": "html-text",
+      "name": "text",
+      "path": "ui/src/pages/plugin/agentbox-view.ts",
+      "text": "No documents indexed yet"
+    },
+    {
+      "count": 1,
+      "kind": "html-text",
+      "name": "text",
+      "path": "ui/src/pages/plugin/agentbox-view.ts",
+      "text": "Source connection failed"
+    },
+    {
+      "count": 1,
+      "kind": "html-text",
+      "name": "text",
+      "path": "ui/src/pages/plugin/agentbox-view.ts",
+      "text": "Sources are configured, but the searchable corpus is still empty. Run synchronization after credentials and RAGFlow are healthy."
     },
     {
       "count": 1,
