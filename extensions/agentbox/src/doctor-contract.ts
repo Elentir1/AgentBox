@@ -22,6 +22,11 @@ function hasRetiredAccessToken(value: unknown): boolean {
   });
 }
 
+function isMissingEntitlements(value: unknown): boolean {
+  const record = asRecord(value);
+  return Boolean(record && record.entitlements === undefined);
+}
+
 /** Retired AgentBox source credentials that doctor should report. */
 export const legacyConfigRules: LegacyConfigRule[] = [
   {
@@ -29,6 +34,12 @@ export const legacyConfigRules: LegacyConfigRule[] = [
     message:
       "AgentBox Microsoft 365 and Google Drive sources no longer accept a disposable accessTokenEnv. Configure Entra client-credentials (entraTenantIdEnv, clientIdEnv, clientSecretEnv) or a Google refresh token (clientIdEnv, clientSecretEnv, refreshTokenEnv) in the tenant secret store. openclaw doctor --fix cannot invent those credentials.",
     match: hasRetiredAccessToken,
+  },
+  {
+    path: ["plugins", "entries", "agentbox", "config"],
+    message:
+      "AgentBox requires a subscription entitlements block. Re-render the tenant manifest with spec.subscription (deploy/agentbox/render-tenant.mjs) and reapply openclaw.batch.json. openclaw doctor --fix cannot invent the plan the customer bought.",
+    match: isMissingEntitlements,
   },
 ];
 

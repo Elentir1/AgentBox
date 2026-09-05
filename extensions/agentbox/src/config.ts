@@ -46,9 +46,31 @@ const webDavSourceSchema = z
   })
   .strict();
 
+// Quota ceilings mirror deploy/agentbox/tenant-manifest.schema.json. maxDocuments
+// cannot exceed the document index capacity in state.ts, so no plan may sell more.
+const entitlementsSchema = z
+  .object({
+    planId: sourceIdSchema,
+    status: z.enum(["active", "grace", "suspended"]),
+    validUntil: z.iso.datetime().optional(),
+    quotas: z
+      .object({
+        maxSources: z.number().int().min(1).max(50),
+        maxDocuments: z.number().int().min(1).max(50_000),
+        maxStorageBytes: z
+          .number()
+          .int()
+          .min(1024 * 1024),
+        minSyncIntervalMinutes: z.number().int().min(1).max(1440),
+      })
+      .strict(),
+  })
+  .strict();
+
 const agentBoxConfigObject = z
   .object({
     tenantId: sourceIdSchema,
+    entitlements: entitlementsSchema,
     backend: z
       .object({
         baseUrl: z.url(),
@@ -93,10 +115,28 @@ const agentBoxConfigObject = z
         path: ["backend", "allowPrivateNetwork"],
       });
     }
+    const quotas = value.entitlements.quotas;
+    // Source count and sync cadence are plan limits the runtime can decide before
+    // it touches a customer document, so they fail configuration instead of a scan.
+    if (value.sources.length > quotas.maxSources) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Plan ${value.entitlements.planId} allows ${quotas.maxSources} document sources, but ${value.sources.length} are configured`,
+        path: ["sources"],
+      });
+    }
+    if (value.sync.intervalMinutes < quotas.minSyncIntervalMinutes) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Plan ${value.entitlements.planId} allows a sync interval of ${quotas.minSyncIntervalMinutes} minutes at the fastest`,
+        path: ["sync", "intervalMinutes"],
+      });
+    }
   });
 
 export type AgentBoxConfig = z.infer<typeof agentBoxConfigObject>;
 export type AgentBoxSourceConfig = AgentBoxConfig["sources"][number];
+export type AgentBoxEntitlements = AgentBoxConfig["entitlements"];
 
 export const agentBoxConfigSchema: OpenClawPluginConfigSchema = buildPluginConfigSchema(
   agentBoxConfigObject,

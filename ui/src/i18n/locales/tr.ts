@@ -1453,6 +1453,24 @@ export const tr: TranslationMap = {
       sat: "Cmt",
     },
   },
+  agentbox: {
+    plan: {
+      title: "Plan usage",
+      summary:
+        "{documents} of {maxDocuments} documents · {storage} · {sources} of {maxSources} sources",
+      storage: "{used} of {total}",
+      storagePartial:
+        "{used} of {total}, plus {unmeasured} documents indexed before storage was measured",
+      limitNote:
+        "Reaching a limit stops new documents from being indexed. Documents already indexed stay searchable.",
+    },
+    subscription: {
+      grace:
+        "This AgentBox has an unpaid invoice. Everything keeps working for now. Contact AlpenData to avoid interruption.",
+      suspended:
+        "This AgentBox is suspended. Company documents are not being synchronized or searched. Contact AlpenData to restore the service.",
+    },
+  },
   login: {
     subtitle: "Gateway Kontrol Paneli",
     passwordPlaceholder: "isteğe bağlı",

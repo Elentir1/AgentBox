@@ -1,10 +1,12 @@
 import { html, nothing } from "lit";
 import type { GatewayBrowserClient } from "../../api/gateway.ts";
+import { t } from "../../i18n/index.ts";
 import {
   ensureAgentBoxPolling,
   syncAgentBox,
   type AgentBoxUiSource,
   type AgentBoxUiStatus,
+  type AgentBoxUiSubscription,
 } from "./agentbox-controller.ts";
 
 const SOURCE_LABELS: Record<AgentBoxUiSource["type"], string> = {
@@ -27,6 +29,44 @@ function statusLabel(source: AgentBoxUiSource): string {
     case "idle":
       return "Waiting for first synchronization";
   }
+}
+
+function formatBytes(bytes: number): string {
+  const gigabytes = bytes / 1024 ** 3;
+  if (gigabytes >= 1) {
+    return `${gigabytes.toFixed(1)} GB`;
+  }
+  return `${Math.round(bytes / 1024 ** 2)} MB`;
+}
+
+function storageLabel(subscription: AgentBoxUiSubscription): string {
+  const { storage } = subscription.usage;
+  const used = formatBytes(storage.bytes);
+  const total = formatBytes(subscription.quotas.maxStorageBytes);
+  // A partial total would otherwise read as free headroom the plan does not have.
+  return storage.kind === "partial"
+    ? t("agentbox.plan.storagePartial", {
+        used,
+        total,
+        unmeasured: String(storage.unmeasuredDocuments),
+      })
+    : t("agentbox.plan.storage", { used, total });
+}
+
+/**
+ * Only a plan that needs customer action is worth interrupting the page for. The
+ * Record keeps the table exhaustive, so a new subscription state cannot ship
+ * silently without deciding what the customer is told.
+ */
+const SUBSCRIPTION_NOTICE_KEYS: Record<AgentBoxUiSubscription["state"], string | null> = {
+  active: null,
+  grace: "agentbox.subscription.grace",
+  suspended: "agentbox.subscription.suspended",
+};
+
+function subscriptionNotice(subscription: AgentBoxUiSubscription): string | null {
+  const key = SUBSCRIPTION_NOTICE_KEYS[subscription.state];
+  return key ? t(key) : null;
 }
 
 function backendMessage(status: AgentBoxUiStatus | null): string | null {
@@ -57,6 +97,8 @@ export function renderAgentBox(props: {
   const sourceErrors = sources.filter((source) => source.state === "error");
   const backendError = backendMessage(status);
   const visibleError = state.error || backendError;
+  const subscription = status?.subscription;
+  const notice = subscription ? subscriptionNotice(subscription) : null;
 
   return html`
     <section class="page">
@@ -78,8 +120,34 @@ export function renderAgentBox(props: {
         </button>
       </div>
 
+      ${notice
+        ? html`<div
+            class=${subscription?.state === "suspended" ? "callout danger" : "callout warn"}
+            role="alert"
+          >
+            ${notice}
+          </div>`
+        : nothing}
       ${visibleError
         ? html`<div class="callout danger" role="alert">${visibleError}</div>`
+        : nothing}
+      ${subscription
+        ? html`
+            <article class="card">
+              <div class="card-title">${t("agentbox.plan.title")}</div>
+              <div class="card-sub">${subscription.planId}</div>
+              <p class="muted">
+                ${t("agentbox.plan.summary", {
+                  documents: String(subscription.usage.documents),
+                  maxDocuments: String(subscription.quotas.maxDocuments),
+                  storage: storageLabel(subscription),
+                  sources: String(sources.length),
+                  maxSources: String(subscription.quotas.maxSources),
+                })}
+              </p>
+              <p class="muted">${t("agentbox.plan.limitNote")}</p>
+            </article>
+          `
         : nothing}
       ${state.loading && !status
         ? html`<div class="card"><p class="muted">Checking document sources…</p></div>`

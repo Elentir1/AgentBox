@@ -27,6 +27,14 @@ function createIsolatedStore(): AgentBoxStateStore {
     async authorizedDocumentIds() {
       return new Set([...documents.values()].map((entry) => entry.documentId));
     },
+    async indexTotals() {
+      const sized = [...documents.values()].filter((entry) => typeof entry.sizeBytes === "number");
+      return {
+        documents: documents.size,
+        measuredDocuments: sized.length,
+        bytes: sized.reduce((sum, entry) => sum + (entry.sizeBytes ?? 0), 0),
+      };
+    },
     async cursorForSource(sourceId) {
       return cursors.get(sourceId);
     },
@@ -71,6 +79,16 @@ describe("AgentBox commercial corpus isolation", () => {
 
     const config: AgentBoxConfig = {
       tenantId: "acme",
+      entitlements: {
+        planId: "business",
+        status: "active",
+        quotas: {
+          maxSources: 4,
+          maxDocuments: 25_000,
+          maxStorageBytes: 53_687_091_200,
+          minSyncIntervalMinutes: 15,
+        },
+      },
       backend: {
         baseUrl: "https://ragflow.example.test",
         datasetId: "acme",

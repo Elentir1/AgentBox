@@ -8,6 +8,7 @@ describe("AgentBox search tool", () => {
     const state: AgentBoxStateStore = {
       documentsForSource: async () => [],
       authorizedDocumentIds: async () => new Set(["doc-leave"]),
+      indexTotals: async () => ({ documents: 1, measuredDocuments: 1, bytes: 32 }),
       cursorForSource: async () => undefined,
       putDocument: async () => undefined,
       deleteDocument: async () => undefined,
@@ -27,6 +28,16 @@ describe("AgentBox search tool", () => {
     const service = new AgentBoxService(
       {
         tenantId: "acme",
+        entitlements: {
+          planId: "business",
+          status: "active",
+          quotas: {
+            maxSources: 4,
+            maxDocuments: 25_000,
+            maxStorageBytes: 53_687_091_200,
+            minSyncIntervalMinutes: 15,
+          },
+        },
         backend: {
           baseUrl: "https://ragflow.example.test",
           datasetId: "acme",
@@ -80,6 +91,16 @@ describe("AgentBox search tool", () => {
     const service = new AgentBoxService(
       {
         tenantId: "acme",
+        entitlements: {
+          planId: "business",
+          status: "active",
+          quotas: {
+            maxSources: 4,
+            maxDocuments: 25_000,
+            maxStorageBytes: 53_687_091_200,
+            minSyncIntervalMinutes: 15,
+          },
+        },
         backend: {
           baseUrl: "https://ragflow.example.test",
           datasetId: "acme",
@@ -92,6 +113,7 @@ describe("AgentBox search tool", () => {
       {
         documentsForSource: async () => [],
         authorizedDocumentIds: async () => new Set(),
+        indexTotals: async () => ({ documents: 0, measuredDocuments: 0, bytes: 0 }),
         cursorForSource: async () => undefined,
         putDocument: async () => undefined,
         deleteDocument: async () => undefined,

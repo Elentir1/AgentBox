@@ -14,6 +14,14 @@ function createStateStore(initial: AgentBoxDocumentState[] = []): AgentBoxStateS
     async authorizedDocumentIds() {
       return new Set([...documents.values()].map((entry) => entry.documentId));
     },
+    async indexTotals() {
+      const sized = [...documents.values()].filter((entry) => typeof entry.sizeBytes === "number");
+      return {
+        documents: documents.size,
+        measuredDocuments: sized.length,
+        bytes: sized.reduce((sum, entry) => sum + (entry.sizeBytes ?? 0), 0),
+      };
+    },
     async cursorForSource(sourceId) {
       return cursors.get(sourceId);
     },
@@ -37,6 +45,16 @@ function createStateStore(initial: AgentBoxDocumentState[] = []): AgentBoxStateS
 
 const localConfig: AgentBoxConfig = {
   tenantId: "acme",
+  entitlements: {
+    planId: "business",
+    status: "active",
+    quotas: {
+      maxSources: 4,
+      maxDocuments: 25_000,
+      maxStorageBytes: 53_687_091_200,
+      minSyncIntervalMinutes: 15,
+    },
+  },
   backend: {
     baseUrl: "https://ragflow.example.test",
     datasetId: "acme",
@@ -182,6 +200,141 @@ describe("AgentBox synchronization", () => {
     });
     expect(events[0]?.queryPreview).toBe("How many leave days?");
     expect(events[0]?.queryDigest).toMatch(/^[a-f0-9]{64}$/u);
+  });
+
+  it("stops a source at the document quota without deleting what is indexed", async () => {
+    const state = createStateStore([
+      {
+        kind: "document",
+        sourceId: "local",
+        sourceKey: "local:kept.pdf",
+        fingerprint: "kept",
+        documentId: "doc-kept",
+        name: "kept.pdf",
+        sizeBytes: 64,
+      },
+    ]);
+    const remove = vi.fn(async () => undefined);
+    const service = new AgentBoxService(
+      {
+        ...localConfig,
+        entitlements: {
+          ...localConfig.entitlements,
+          quotas: { ...localConfig.entitlements.quotas, maxDocuments: 1 },
+        },
+      },
+      state,
+      { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+      {
+        client: {
+          upload: vi.fn(async () => "doc-new"),
+          delete: remove,
+          search: vi.fn(async () => []),
+        },
+        createAdapter: (source) => ({
+          id: source.id,
+          async scan() {
+            return {
+              mode: "delta" as const,
+              documents: [
+                {
+                  key: "local:new.pdf",
+                  name: "new.pdf",
+                  mimeType: "application/pdf",
+                  fingerprint: "new",
+                  size: 32,
+                  modifiedAtMs: 1,
+                  read: async () => Buffer.from("x".repeat(32)),
+                },
+              ],
+              deletedKeys: [],
+            };
+          },
+        }),
+      },
+    );
+
+    const status = await service.runOnce();
+
+    expect(status.sources[0]).toMatchObject({
+      state: "error",
+      error: expect.stringContaining("1 indexed documents"),
+    });
+    expect(status.sources[0]?.uploaded).toBe(0);
+    expect(remove).not.toHaveBeenCalled();
+    expect(await state.authorizedDocumentIds()).toEqual(new Set(["doc-kept"]));
+    expect(status.subscription.usage).toEqual({
+      documents: 1,
+      storage: { kind: "measured", bytes: 64 },
+    });
+  });
+
+  it("refuses to scan or search while the subscription is suspended", async () => {
+    const search = vi.fn(async () => []);
+    const scan = vi.fn();
+    const service = new AgentBoxService(
+      {
+        ...localConfig,
+        entitlements: { ...localConfig.entitlements, status: "suspended" },
+      },
+      createStateStore(),
+      { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+      {
+        client: {
+          upload: vi.fn(async () => "unused"),
+          delete: vi.fn(async () => undefined),
+          search,
+        },
+        createAdapter: (source) => ({ id: source.id, scan: scan as never }),
+      },
+    );
+
+    const status = await service.runOnce();
+
+    expect(scan).not.toHaveBeenCalled();
+    expect(status.subscription.state).toBe("suspended");
+    await expect(service.search("anything")).rejects.toThrow("suspended");
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it("reports storage as partial while documents predate size accounting", async () => {
+    const service = new AgentBoxService(
+      localConfig,
+      createStateStore([
+        {
+          kind: "document",
+          sourceId: "local",
+          sourceKey: "local:legacy.pdf",
+          fingerprint: "legacy",
+          documentId: "doc-legacy",
+          name: "legacy.pdf",
+        },
+        {
+          kind: "document",
+          sourceId: "local",
+          sourceKey: "local:sized.pdf",
+          fingerprint: "sized",
+          documentId: "doc-sized",
+          name: "sized.pdf",
+          sizeBytes: 128,
+        },
+      ]),
+      { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+      {
+        client: {
+          upload: vi.fn(async () => "unused"),
+          delete: vi.fn(async () => undefined),
+          search: vi.fn(async () => []),
+        },
+      },
+    );
+
+    const status = await service.refreshStatus();
+
+    expect(status.subscription.usage).toEqual({
+      documents: 2,
+      storage: { kind: "partial", bytes: 128, unmeasuredDocuments: 1 },
+    });
   });
 
   it("fails closed when RAGFlow is unreachable", async () => {

@@ -26,6 +26,16 @@ describe("AgentBox config", () => {
   it("accepts one isolated tenant with renewable source credentials", () => {
     const config = resolveAgentBoxConfig({
       tenantId: "acme",
+      entitlements: {
+        planId: "business",
+        status: "active",
+        quotas: {
+          maxSources: 4,
+          maxDocuments: 25_000,
+          maxStorageBytes: 53_687_091_200,
+          minSyncIntervalMinutes: 15,
+        },
+      },
       backend: {
         baseUrl: "http://ragflow.internal:9380",
         datasetId: "acme",
@@ -57,9 +67,73 @@ describe("AgentBox config", () => {
     expect(isTenantScopedDataset("acme", "other")).toBe(false);
   });
 
+  it("rejects a corpus or cadence the plan does not cover", () => {
+    const base = {
+      tenantId: "acme",
+      entitlements: {
+        planId: "starter",
+        status: "active" as const,
+        quotas: {
+          maxSources: 1,
+          maxDocuments: 5_000,
+          maxStorageBytes: 10_737_418_240,
+          minSyncIntervalMinutes: 60,
+        },
+      },
+      backend: {
+        baseUrl: "https://ragflow.example.test",
+        datasetId: "acme",
+        apiKeyEnv: "RAGFLOW_API_KEY",
+      },
+    };
+
+    expect(() =>
+      resolveAgentBoxConfig({
+        ...base,
+        sources: [{ id: "local", type: "local", root: "/documents" }, googleSource],
+      }),
+    ).toThrow("allows 1 document sources");
+
+    expect(() =>
+      resolveAgentBoxConfig({
+        ...base,
+        sync: { intervalMinutes: 15, maxFileBytes: 1024 },
+        sources: [{ id: "local", type: "local", root: "/documents" }],
+      }),
+    ).toThrow("60 minutes at the fastest");
+
+    expect(() =>
+      resolveAgentBoxConfig({
+        ...base,
+        entitlements: {
+          ...base.entitlements,
+          quotas: { ...base.entitlements.quotas, maxDocuments: 250_000 },
+        },
+        sources: [{ id: "local", type: "local", root: "/documents" }],
+      }),
+    ).toThrow();
+
+    const accepted = resolveAgentBoxConfig({
+      ...base,
+      sync: { intervalMinutes: 60, maxFileBytes: 1024 },
+      sources: [{ id: "local", type: "local", root: "/documents" }],
+    });
+    expect(accepted.entitlements.planId).toBe("starter");
+  });
+
   it("rejects disposable access tokens, duplicate sources, and insecure transports", () => {
     const base = {
       tenantId: "acme",
+      entitlements: {
+        planId: "business",
+        status: "active",
+        quotas: {
+          maxSources: 4,
+          maxDocuments: 25_000,
+          maxStorageBytes: 53_687_091_200,
+          minSyncIntervalMinutes: 15,
+        },
+      },
       backend: {
         baseUrl: "https://ragflow.example.test",
         datasetId: "acme",

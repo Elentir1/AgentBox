@@ -1,4 +1,4 @@
-import { isTenantScopedDataset, type AgentBoxConfig } from "./config.js";
+import { isTenantScopedDataset, type AgentBoxConfig, type AgentBoxEntitlements } from "./config.js";
 import { RagFlowClient, type AgentBoxSearchResult } from "./ragflow-client.js";
 import { createSourceAdapter, type AgentBoxDocument } from "./sources.js";
 import { digestSearchQuery, type AgentBoxDocumentState, type AgentBoxStateStore } from "./state.js";
@@ -29,15 +29,36 @@ export type AgentBoxSourceStatus = {
   error?: string;
 };
 
+/**
+ * Documents indexed before quotas shipped carry no recorded size, so the total is
+ * reported as partial rather than as a smaller measured number. An operator must
+ * be able to tell "10 GB used" from "10 GB plus 40 files we have not sized yet".
+ */
+export type AgentBoxStorageUsage =
+  | { kind: "measured"; bytes: number }
+  | { kind: "partial"; bytes: number; unmeasuredDocuments: number };
+
+export type AgentBoxSubscriptionStatus = {
+  planId: string;
+  state: AgentBoxEntitlements["status"];
+  validUntil?: string;
+  quotas: AgentBoxEntitlements["quotas"];
+  usage: { documents: number; storage: AgentBoxStorageUsage };
+};
+
 export type AgentBoxStatus = {
   tenantId: string;
   running: boolean;
   syncInProgress: boolean;
   lastSyncStartedAt?: string;
   lastSyncCompletedAt?: string;
+  subscription: AgentBoxSubscriptionStatus;
   backend: AgentBoxBackendStatus;
   sources: AgentBoxSourceStatus[];
 };
+
+/** Remaining corpus headroom for one sync pass, shared across every source. */
+type AgentBoxQuotaBudget = { documents: number; bytes: number };
 
 export class AgentBoxService {
   private readonly client: AgentBoxDocumentClient;
@@ -50,6 +71,10 @@ export class AgentBoxService {
   private backendStatus: AgentBoxBackendStatus = {
     state: "error",
     error: "RAGFlow has not been checked yet.",
+  };
+  private usage: AgentBoxSubscriptionStatus["usage"] = {
+    documents: 0,
+    storage: { kind: "measured", bytes: 0 },
   };
   private readonly createAdapter: typeof createSourceAdapter;
 
@@ -100,12 +125,20 @@ export class AgentBoxService {
       syncInProgress: Boolean(this.syncPromise),
       lastSyncStartedAt: this.lastSyncStartedAt,
       lastSyncCompletedAt: this.lastSyncCompletedAt,
+      subscription: {
+        planId: this.config.entitlements.planId,
+        state: this.config.entitlements.status,
+        validUntil: this.config.entitlements.validUntil,
+        quotas: { ...this.config.entitlements.quotas },
+        usage: this.usage,
+      },
       backend: { ...this.backendStatus },
       sources: this.sourceStatuses.map((source) => ({ ...source })),
     };
   }
 
   async refreshStatus(): Promise<AgentBoxStatus> {
+    this.usage = await this.readUsage();
     this.backendStatus = await this.probeBackend();
     return this.status();
   }
@@ -115,6 +148,7 @@ export class AgentBoxService {
     limit?: number,
     actor = "agent-tool",
   ): Promise<AgentBoxSearchResult[]> {
+    this.requireActiveSubscription();
     const raw = await this.client.search(question, limit);
     // Retrieval is bound to this instance's indexed document IDs. RAGFlow dataset
     // isolation is the primary boundary; this filter fails closed if a foreign
@@ -170,6 +204,16 @@ export class AgentBoxService {
 
   private async performSync(): Promise<AgentBoxStatus> {
     this.lastSyncStartedAt = new Date().toISOString();
+    this.usage = await this.readUsage();
+    // A suspended tenant is meant to have a stopped Gateway. Refusing to scan is
+    // the second line of defence when the control plane failed to stop this one.
+    if (this.config.entitlements.status === "suspended") {
+      this.logger.warn(
+        `AgentBox skipped synchronization: plan ${this.config.entitlements.planId} is suspended.`,
+      );
+      this.lastSyncCompletedAt = new Date().toISOString();
+      return this.status();
+    }
     this.backendStatus = await this.probeBackend();
     if (this.backendStatus.state === "error") {
       for (const status of this.sourceStatuses) {
@@ -179,6 +223,10 @@ export class AgentBoxService {
       this.lastSyncCompletedAt = new Date().toISOString();
       return this.status();
     }
+    const budget: AgentBoxQuotaBudget = {
+      documents: this.config.entitlements.quotas.maxDocuments - this.usage.documents,
+      bytes: this.config.entitlements.quotas.maxStorageBytes - this.usage.storage.bytes,
+    };
     for (const source of this.config.sources) {
       const status = this.sourceStatuses.find((entry) => entry.id === source.id);
       if (!status) {
@@ -190,7 +238,7 @@ export class AgentBoxService {
       status.deleted = 0;
       status.skipped = 0;
       try {
-        await this.syncSource(source.id, status);
+        await this.syncSource(source.id, status, budget);
         status.state = "ready";
         status.lastSyncAt = new Date().toISOString();
       } catch (error) {
@@ -200,6 +248,7 @@ export class AgentBoxService {
       }
     }
     this.lastSyncCompletedAt = new Date().toISOString();
+    this.usage = await this.readUsage();
     const status = this.status();
     await this.state.appendAudit({
       kind: "audit",
@@ -213,7 +262,11 @@ export class AgentBoxService {
     return status;
   }
 
-  private async syncSource(sourceId: string, status: AgentBoxSourceStatus): Promise<void> {
+  private async syncSource(
+    sourceId: string,
+    status: AgentBoxSourceStatus,
+    budget: AgentBoxQuotaBudget,
+  ): Promise<void> {
     const sourceConfig = this.config.sources.find((source) => source.id === sourceId);
     if (!sourceConfig) {
       throw new Error(`Unknown AgentBox source ${sourceId}.`);
@@ -243,6 +296,8 @@ export class AgentBoxService {
       await this.client.delete([entry.documentId]);
       await this.state.deleteDocument(key);
       previousByKey.delete(key);
+      budget.documents += 1;
+      budget.bytes += entry.sizeBytes ?? 0;
       status.deleted += 1;
     }
     for (const document of incomingByKey.values()) {
@@ -256,14 +311,22 @@ export class AgentBoxService {
         status.skipped += 1;
         continue;
       }
-      if (existing) {
-        await this.client.delete([existing.documentId]);
-      }
+      // Replacing a document returns its slot to the budget before the new copy
+      // is measured, so an in-place update never counts twice against the plan.
+      const replacedBytes = existing ? (existing.sizeBytes ?? 0) : 0;
+      const replacedDocuments = existing ? 1 : 0;
       const bytes = await document.read();
       if (bytes.byteLength > this.config.sync.maxFileBytes) {
         throw new Error(
           `${document.name} download exceeds the configured ${this.config.sync.maxFileBytes} byte limit.`,
         );
+      }
+      this.requireQuotaHeadroom(document.name, bytes.byteLength, budget, {
+        replacedBytes,
+        replacedDocuments,
+      });
+      if (existing) {
+        await this.client.delete([existing.documentId]);
       }
       const documentId = await this.client.upload({
         filename: document.name,
@@ -285,8 +348,11 @@ export class AgentBoxService {
         documentId,
         name: document.name,
         sourceUrl: document.sourceUrl,
+        sizeBytes: bytes.byteLength,
       };
       await this.state.putDocument(next);
+      budget.documents += replacedDocuments - 1;
+      budget.bytes += replacedBytes - bytes.byteLength;
       status.uploaded += 1;
     }
     if (scan.cursor) {
@@ -296,6 +362,50 @@ export class AgentBoxService {
     this.logger.info(
       `AgentBox source ${sourceId}: ${status.uploaded} uploaded, ${status.deleted} deleted, ${status.skipped} unchanged.`,
     );
+  }
+
+  private requireActiveSubscription(): void {
+    if (this.config.entitlements.status === "suspended") {
+      throw new Error(
+        `AgentBox is suspended for tenant ${this.config.tenantId}. Contact AlpenData to restore the subscription.`,
+      );
+    }
+  }
+
+  /**
+   * Refuses the document that would cross a plan limit instead of trimming the
+   * corpus. The caller turns this into a source error, so files already indexed
+   * stay searchable and going over quota never destroys customer data.
+   */
+  private requireQuotaHeadroom(
+    name: string,
+    sizeBytes: number,
+    budget: AgentBoxQuotaBudget,
+    replaced: { replacedBytes: number; replacedDocuments: number },
+  ): void {
+    const quotas = this.config.entitlements.quotas;
+    if (budget.documents + replaced.replacedDocuments < 1) {
+      throw new Error(
+        `Plan ${this.config.entitlements.planId} allows ${quotas.maxDocuments} indexed documents. ${name} was not indexed. Upgrade the plan or remove documents from the source.`,
+      );
+    }
+    if (budget.bytes + replaced.replacedBytes < sizeBytes) {
+      throw new Error(
+        `Plan ${this.config.entitlements.planId} allows ${quotas.maxStorageBytes} indexed bytes. ${name} was not indexed. Upgrade the plan or remove documents from the source.`,
+      );
+    }
+  }
+
+  private async readUsage(): Promise<AgentBoxSubscriptionStatus["usage"]> {
+    const totals = await this.state.indexTotals();
+    const unmeasuredDocuments = totals.documents - totals.measuredDocuments;
+    return {
+      documents: totals.documents,
+      storage:
+        unmeasuredDocuments > 0
+          ? { kind: "partial", bytes: totals.bytes, unmeasuredDocuments }
+          : { kind: "measured", bytes: totals.bytes },
+    };
   }
 
   private async probeBackend(): Promise<AgentBoxBackendStatus> {

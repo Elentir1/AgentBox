@@ -7,6 +7,8 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 const TENANT_ID_RE = /^[a-z0-9][a-z0-9-]{1,62}$/u;
 const ENV_NAME_RE = /^[A-Z][A-Z0-9_]+$/u;
 const SOURCE_TYPES = new Set(["google-drive", "local", "microsoft-365", "webdav"]);
+const SUBSCRIPTION_STATUSES = new Set(["active", "grace", "suspended"]);
+const DEFAULT_SYNC_INTERVAL_MINUTES = 15;
 
 function requireRecord(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -45,6 +47,65 @@ function requireHttpUrl(value, label, { httpsOnly = false } = {}) {
     throw new Error(`${label} must be a credential-free ${httpsOnly ? "HTTPS" : "HTTP(S)"} URL.`);
   }
   return url.toString().replace(/\/$/u, "");
+}
+
+function requireQuota(value, label, { min, max }) {
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new Error(`${label} must be an integer between ${min} and ${max}.`);
+  }
+  return value;
+}
+
+function normalizeSubscription(value, sourceCount) {
+  const subscription = requireRecord(value, "spec.subscription");
+  const planId = requireString(subscription.planId, "spec.subscription.planId");
+  if (!TENANT_ID_RE.test(planId)) {
+    throw new Error("spec.subscription.planId must be a lowercase DNS-safe identifier.");
+  }
+  const status = requireString(subscription.status, "spec.subscription.status");
+  if (!SUBSCRIPTION_STATUSES.has(status)) {
+    throw new Error("spec.subscription.status must be active, grace, or suspended.");
+  }
+  const quotas = requireRecord(subscription.quotas, "spec.subscription.quotas");
+  // The document index is bounded by AGENTBOX_STATE_MAX_ENTRIES in the plugin
+  // state store. A tier may not sell a corpus the runtime cannot track.
+  const maxDocuments = requireQuota(quotas.maxDocuments, "quotas.maxDocuments", {
+    min: 1,
+    max: 50_000,
+  });
+  const maxSources = requireQuota(quotas.maxSources, "quotas.maxSources", { min: 1, max: 50 });
+  if (sourceCount > maxSources) {
+    throw new Error(
+      `spec.documents.sources has ${sourceCount} sources but the plan allows ${maxSources}.`,
+    );
+  }
+  let validUntil;
+  if (subscription.validUntil !== undefined) {
+    const raw = requireString(subscription.validUntil, "spec.subscription.validUntil");
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new Error("spec.subscription.validUntil must be an ISO 8601 timestamp.");
+    }
+    validUntil = parsed.toISOString();
+  }
+  return {
+    planId,
+    status,
+    validUntil,
+    quotas: {
+      maxSources,
+      maxDocuments,
+      maxStorageBytes: requireQuota(quotas.maxStorageBytes, "quotas.maxStorageBytes", {
+        min: 1024 * 1024,
+        max: Number.MAX_SAFE_INTEGER,
+      }),
+      minSyncIntervalMinutes: requireQuota(
+        quotas.minSyncIntervalMinutes,
+        "quotas.minSyncIntervalMinutes",
+        { min: 1, max: 1440 },
+      ),
+    },
+  };
 }
 
 function normalizeSource(value, index) {
@@ -151,6 +212,7 @@ export function normalizeTenantManifest(input) {
   return {
     id,
     displayName: requireString(metadata.displayName, "metadata.displayName"),
+    subscription: normalizeSubscription(spec.subscription, sources.length),
     image: requireString(spec.image, "spec.image"),
     hostRoot,
     publicOrigin: requireHttpUrl(spec.publicOrigin, "spec.publicOrigin", { httpsOnly: true }),
@@ -271,7 +333,15 @@ export function renderTenantArtifacts(input) {
     config: {
       tenantId: tenant.id,
       backend: tenant.documents.backend,
-      sync: { intervalMinutes: 15 },
+      entitlements: tenant.subscription,
+      // The product default only applies when the plan allows it; a slower plan
+      // floor wins so the rendered config never asks for a cadence it cannot buy.
+      sync: {
+        intervalMinutes: Math.max(
+          DEFAULT_SYNC_INTERVAL_MINUTES,
+          tenant.subscription.quotas.minSyncIntervalMinutes,
+        ),
+      },
       sources: tenant.documents.sources.map((source) =>
         source.type === "local" ? { ...source, root: `/agentbox/sources/${source.id}` } : source,
       ),

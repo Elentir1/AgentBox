@@ -12,6 +12,23 @@ export type AgentBoxUiSource = {
   error?: string;
 };
 
+export type AgentBoxUiStorageUsage =
+  | { kind: "measured"; bytes: number }
+  | { kind: "partial"; bytes: number; unmeasuredDocuments: number };
+
+export type AgentBoxUiSubscription = {
+  planId: string;
+  state: "active" | "grace" | "suspended";
+  validUntil?: string;
+  quotas: {
+    maxSources: number;
+    maxDocuments: number;
+    maxStorageBytes: number;
+    minSyncIntervalMinutes: number;
+  };
+  usage: { documents: number; storage: AgentBoxUiStorageUsage };
+};
+
 export type AgentBoxUiStatus = {
   tenantId: string;
   running: boolean;
@@ -22,6 +39,9 @@ export type AgentBoxUiStatus = {
     state: "ready" | "error";
     error?: string;
   };
+  // Older Gateways answer agentbox.status without a subscription block, so the
+  // page must render a corpus with no plan rather than blanking out.
+  subscription?: AgentBoxUiSubscription;
   sources: AgentBoxUiSource[];
 };
 

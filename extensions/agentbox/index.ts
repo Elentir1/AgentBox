@@ -69,6 +69,16 @@ export default definePluginEntry({
             "Give each customer a dedicated RAGFlow dataset whose id starts with the tenant id.",
         });
       }
+      if (config.entitlements.status === "suspended") {
+        findings.push({
+          checkId: "agentbox.subscription.suspended",
+          severity: "critical",
+          title: "AgentBox is running with a suspended subscription",
+          detail: `Plan ${config.entitlements.planId} is suspended, but this Gateway is running. Suspension is enforced by stopping the deployment; a running suspended tenant means the control plane did not complete that step.`,
+          remediation:
+            "Stop the tenant Compose project, or reinstate the subscription and re-render the tenant manifest.",
+        });
+      }
       for (const source of config.sources) {
         if (source.type === "webdav" && source.allowPrivateNetwork) {
           findings.push({

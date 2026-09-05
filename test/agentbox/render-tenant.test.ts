@@ -22,6 +22,16 @@ function createManifest() {
         userHeader: "x-forwarded-user",
       },
       provider: { model: "openai/gpt-5.5", apiKeyEnv: "OPENAI_API_KEY" },
+      subscription: {
+        planId: "business",
+        status: "active",
+        quotas: {
+          maxSources: 4,
+          maxDocuments: 25_000,
+          maxStorageBytes: 53_687_091_200,
+          minSyncIntervalMinutes: 15,
+        },
+      },
       documents: {
         backend: {
           baseUrl: "http://ragflow.internal:9380",
@@ -86,6 +96,17 @@ describe("AgentBox tenant renderer", () => {
       enabled: true,
       config: {
         tenantId: "acme",
+        entitlements: {
+          planId: "business",
+          status: "active",
+          quotas: {
+            maxSources: 4,
+            maxDocuments: 25_000,
+            maxStorageBytes: 53_687_091_200,
+            minSyncIntervalMinutes: 15,
+          },
+        },
+        sync: { intervalMinutes: 15 },
         sources: expect.arrayContaining([
           { id: "local", type: "local", root: "/agentbox/sources/local" },
         ]),
@@ -117,6 +138,8 @@ describe("AgentBox tenant renderer", () => {
     expect(template).not.toContain("example.com");
     expect(template).not.toContain("ghcr.io/alpendata/agentbox:2026.8");
     expect(template).not.toContain("accessTokenEnv");
+    expect(template).toContain("subscription:");
+    expect(template).toContain("<plan-id>");
   });
 
   it("rejects shared, unsafe, or placeholder-style deployment inputs", () => {
@@ -159,12 +182,44 @@ describe("AgentBox tenant renderer", () => {
     } as never;
     expect(() => normalizeTenantManifest(retiredToken)).toThrow("entraTenantIdEnv");
 
+    const missingSubscription = createManifest() as { spec: Record<string, unknown> };
+    delete missingSubscription.spec.subscription;
+    expect(() => normalizeTenantManifest(missingSubscription)).toThrow("spec.subscription");
+
+    const unknownStatus = createManifest();
+    unknownStatus.spec.subscription.status = "trialing" as never;
+    expect(() => normalizeTenantManifest(unknownStatus)).toThrow("active, grace, or suspended");
+
+    const oversoldCorpus = createManifest();
+    oversoldCorpus.spec.subscription.quotas.maxDocuments = 250_000;
+    expect(() => normalizeTenantManifest(oversoldCorpus)).toThrow("maxDocuments");
+
+    const oversoldSources = createManifest();
+    oversoldSources.spec.subscription.quotas.maxSources = 2;
+    expect(() => normalizeTenantManifest(oversoldSources)).toThrow("the plan allows 2");
+
     const proxyWithoutAllowlist = createManifest();
     proxyWithoutAllowlist.spec.identity = {
       mode: "trusted-proxy",
       userHeader: "x-forwarded-user",
     };
     expect(() => normalizeTenantManifest(proxyWithoutAllowlist)).toThrow("trustedProxies");
+  });
+
+  it("slows the rendered sync cadence to the plan floor", () => {
+    const manifest = createManifest();
+    manifest.spec.subscription.planId = "starter";
+    manifest.spec.subscription.quotas.minSyncIntervalMinutes = 60;
+    const { files } = renderTenantArtifacts(manifest);
+    const batch = JSON.parse(files["openclaw.batch.json"]) as Array<{
+      path: string;
+      value: unknown;
+    }>;
+    const plugin = batch.find((entry) => entry.path === "plugins.entries.agentbox")?.value as {
+      config?: { sync?: { intervalMinutes?: number } };
+    };
+
+    expect(plugin.config?.sync?.intervalMinutes).toBe(60);
   });
 
   it("keeps token mode as operator CLI access", () => {

@@ -150,6 +150,62 @@ describeControlUiE2e("AgentBox employee experience", () => {
     }
   });
 
+  it("warns a suspended tenant and shows plan usage instead of unlimited capacity", async () => {
+    const context = await browser.newContext({
+      locale: "en-US",
+      serviceWorkers: "block",
+      viewport: { height: 900, width: 1440 },
+    });
+    const page = await context.newPage();
+    await installMockGateway(page, {
+      ...employeeGateway,
+      methodResponses: {
+        "agentbox.status": {
+          tenantId: "pilot",
+          running: true,
+          syncInProgress: false,
+          backend: { state: "ready" },
+          subscription: {
+            planId: "starter",
+            state: "suspended",
+            quotas: {
+              maxSources: 1,
+              maxDocuments: 5000,
+              maxStorageBytes: 10_737_418_240,
+              minSyncIntervalMinutes: 60,
+            },
+            usage: { documents: 120, storage: { kind: "measured", bytes: 2_147_483_648 } },
+          },
+          sources: [
+            {
+              id: "kdrive",
+              type: "webdav",
+              state: "ready",
+              indexed: 120,
+              uploaded: 0,
+              deleted: 0,
+              skipped: 120,
+            },
+          ],
+        },
+      },
+    });
+
+    try {
+      await page.goto(`${server.baseUrl}overview`);
+      const sidebar = page.locator("openclaw-app-sidebar");
+      await sidebar.getByRole("link", { name: "Company documents" }).click();
+      await expect
+        .poll(() => page.getByRole("alert").filter({ hasText: "suspended" }).count())
+        .toBe(1);
+      await expect.poll(() => page.getByText("Plan usage").count()).toBe(1);
+      await expect.poll(() => page.getByText("120 of 5000 documents").count()).toBe(1);
+      await expect.poll(() => page.getByText("2.0 GB of 10.0 GB").count()).toBe(1);
+    } finally {
+      await context.close();
+    }
+  });
+
   it("keeps the operator console for administrators", async () => {
     const context = await browser.newContext({
       locale: "en-US",

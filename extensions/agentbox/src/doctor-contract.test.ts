@@ -40,4 +40,20 @@ describe("AgentBox doctor contract", () => {
       changes: [],
     });
   });
+
+  it("reports a tenant configured without a subscription plan", () => {
+    const rule = legacyConfigRules.find(
+      (entry) => entry.path.join(".") === "plugins.entries.agentbox.config",
+    );
+
+    expect(rule?.match?.({ tenantId: "acme", sources: [] })).toBe(true);
+    expect(
+      rule?.match?.({
+        tenantId: "acme",
+        entitlements: { planId: "business", status: "active" },
+        sources: [],
+      }),
+    ).toBe(false);
+    expect(rule?.message).toContain("cannot invent the plan");
+  });
 });

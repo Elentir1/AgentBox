@@ -12,6 +12,17 @@ export type AgentBoxDocumentState = {
   documentId: string;
   name: string;
   sourceUrl?: string;
+  // Recorded from the uploaded payload so storage quota accounting never has to
+  // re-download the corpus. Records written before quotas shipped have none, and
+  // indexTotals reports them separately instead of counting them as zero bytes.
+  sizeBytes?: number;
+};
+
+/** Corpus size facts behind the maxDocuments and maxStorageBytes quotas. */
+export type AgentBoxIndexTotals = {
+  documents: number;
+  measuredDocuments: number;
+  bytes: number;
 };
 
 export type AgentBoxAuditEvent = {
@@ -40,6 +51,7 @@ type AgentBoxDocumentRecord = AgentBoxDocumentState | AgentBoxCursorState;
 export type AgentBoxStateStore = {
   documentsForSource: (sourceId: string) => Promise<AgentBoxDocumentState[]>;
   authorizedDocumentIds: () => Promise<Set<string>>;
+  indexTotals: () => Promise<AgentBoxIndexTotals>;
   cursorForSource: (sourceId: string) => Promise<string | undefined>;
   putDocument: (entry: AgentBoxDocumentState) => Promise<void>;
   deleteDocument: (sourceKey: string) => Promise<void>;
@@ -97,6 +109,20 @@ export function createAgentBoxStateStore(
           .filter((entry): entry is AgentBoxDocumentState => entry.kind === "document")
           .map((entry) => entry.documentId),
       );
+    },
+    async indexTotals() {
+      const documents = (await openDocuments().entries())
+        .map((entry) => entry.value)
+        .filter((entry): entry is AgentBoxDocumentState => entry.kind === "document");
+      let measuredDocuments = 0;
+      let bytes = 0;
+      for (const document of documents) {
+        if (typeof document.sizeBytes === "number") {
+          measuredDocuments += 1;
+          bytes += document.sizeBytes;
+        }
+      }
+      return { documents: documents.length, measuredDocuments, bytes };
     },
     async cursorForSource(sourceId) {
       const entry = await openDocuments().lookup(stateKey("cursor", sourceId));

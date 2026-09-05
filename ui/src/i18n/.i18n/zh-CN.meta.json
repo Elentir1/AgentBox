@@ -1,11 +1,19 @@
 {
-  "fallbackKeys": [],
-  "generatedAt": "2026-08-31T20:39:37.377Z",
+  "fallbackKeys": [
+    "agentbox.plan.limitNote",
+    "agentbox.plan.storage",
+    "agentbox.plan.storagePartial",
+    "agentbox.plan.summary",
+    "agentbox.plan.title",
+    "agentbox.subscription.grace",
+    "agentbox.subscription.suspended"
+  ],
+  "generatedAt": "2026-09-05T11:54:17.652Z",
   "locale": "zh-CN",
   "model": "gpt-5.5",
   "provider": "openai",
-  "sourceHash": "4c0f6039e0f619b08017066775cd951b2eca912ef7a6bb0cf5ed64910a246920",
-  "totalKeys": 1680,
-  "translatedKeys": 1669,
+  "sourceHash": "d031347af3dcb18ea8479e3a528c4a315d84a1a56c83b39aa91085628db5f024",
+  "totalKeys": 1687,
+  "translatedKeys": 1680,
   "workflow": 1
 }

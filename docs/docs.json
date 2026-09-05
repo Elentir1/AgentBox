@@ -1017,6 +1017,7 @@
                 "group": "Overview",
                 "pages": [
                   "agentbox/index",
+                  "agentbox/pricing",
                   "index",
                   "start/showcase",
                   "concepts/features"

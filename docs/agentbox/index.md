@@ -85,6 +85,26 @@ authorization remains the enforcement boundary. Token-mode operator boxes keep
 Unauthenticated employees see a company-identity retry, not `openclaw dashboard`
 instructions.
 
+## Subscription and quotas
+
+Each AgentBox is sold on a fixed monthly tier. The tenant manifest carries the
+plan in `spec.subscription`, the renderer writes it into the `agentbox` plugin
+configuration, and the runtime enforces it on itself: source count and sync
+cadence fail at configuration time, while document count and indexed storage stop
+a synchronization pass at the limit and mark the source `error`. Documents already
+indexed are never deleted to free space.
+
+A suspended tenant is enforced by stopping its deployment. If the runtime finds
+itself running while suspended it refuses to synchronize or search, and reports a
+critical security-audit finding, because that combination means the control plane
+did not finish the job.
+
+Seat counts are contractual only. This version keeps no user registry, so it
+cannot enforce them — see the access-control limitation below.
+
+Tiers, quota values, grace periods, and the deletion timeline live in
+[AgentBox subscription](/agentbox/pricing).
+
 ## Document sources
 
 v1 connectors are Microsoft 365, Google Drive, and Infomaniak kDrive. Local

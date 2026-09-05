@@ -20,7 +20,15 @@
     "spec": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["image", "hostRoot", "publicOrigin", "identity", "provider", "documents"],
+      "required": [
+        "image",
+        "hostRoot",
+        "publicOrigin",
+        "identity",
+        "provider",
+        "subscription",
+        "documents"
+      ],
       "properties": {
         "image": { "type": "string", "minLength": 1 },
         "hostRoot": { "type": "string", "pattern": "^/" },
@@ -55,6 +63,32 @@
           "properties": {
             "model": { "type": "string", "minLength": 3 },
             "apiKeyEnv": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" }
+          }
+        },
+        "subscription": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["planId", "status", "quotas"],
+          "properties": {
+            "planId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$" },
+            "status": { "enum": ["active", "grace", "suspended"] },
+            "validUntil": { "type": "string", "format": "date-time" },
+            "quotas": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "maxSources",
+                "maxDocuments",
+                "maxStorageBytes",
+                "minSyncIntervalMinutes"
+              ],
+              "properties": {
+                "maxSources": { "type": "integer", "minimum": 1, "maximum": 50 },
+                "maxDocuments": { "type": "integer", "minimum": 1, "maximum": 50000 },
+                "maxStorageBytes": { "type": "integer", "minimum": 1048576 },
+                "minSyncIntervalMinutes": { "type": "integer", "minimum": 1, "maximum": 1440 }
+              }
+            }
           }
         },
         "documents": {
