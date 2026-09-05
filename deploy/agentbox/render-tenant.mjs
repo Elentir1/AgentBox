@@ -9,6 +9,7 @@ const ENV_NAME_RE = /^[A-Z][A-Z0-9_]+$/u;
 const SOURCE_TYPES = new Set(["google-drive", "local", "microsoft-365", "webdav"]);
 const SUBSCRIPTION_STATUSES = new Set(["active", "grace", "suspended"]);
 const DEFAULT_SYNC_INTERVAL_MINUTES = 15;
+const PROVIDER_APIS = new Set(["openai-completions", "openai-responses"]);
 
 function requireRecord(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -54,6 +55,67 @@ function requireQuota(value, label, { min, max }) {
     throw new Error(`${label} must be an integer between ${min} and ${max}.`);
   }
   return value;
+}
+
+function normalizeProviderModel(value, index) {
+  const entry = requireRecord(value, `spec.provider.models[${index}]`);
+  const id = requireString(entry.id, `spec.provider.models[${index}].id`);
+  const model = {
+    id,
+    name: typeof entry.name === "string" && entry.name.trim() ? entry.name.trim() : id,
+  };
+  for (const key of ["contextWindow", "maxTokens"]) {
+    if (entry[key] !== undefined) {
+      if (!Number.isInteger(entry[key]) || entry[key] < 1) {
+        throw new Error(`spec.provider.models[${index}].${key} must be a positive integer.`);
+      }
+      model[key] = entry[key];
+    }
+  }
+  return model;
+}
+
+function normalizeProvider(value) {
+  const provider = requireRecord(value, "spec.provider");
+  const model = requireString(provider.model, "spec.provider.model");
+  const apiKeyEnv = requireEnvName(provider.apiKeyEnv, "spec.provider.apiKeyEnv");
+  if (provider.baseUrl === undefined) {
+    // Hosted providers ship their own catalog; a bare endpoint override would be
+    // half a provider definition and would fail model resolution at runtime.
+    if (provider.api !== undefined || provider.models !== undefined) {
+      throw new Error("spec.provider.api and spec.provider.models require spec.provider.baseUrl.");
+    }
+    return { model, apiKeyEnv };
+  }
+  const baseUrl = requireHttpUrl(provider.baseUrl, "spec.provider.baseUrl", { httpsOnly: true });
+  const separator = model.indexOf("/");
+  if (separator < 1 || separator === model.length - 1) {
+    throw new Error(
+      "spec.provider.model must be <provider-id>/<model-id> when spec.provider.baseUrl is set.",
+    );
+  }
+  const id = model.slice(0, separator);
+  const modelId = model.slice(separator + 1);
+  if (!TENANT_ID_RE.test(id)) {
+    throw new Error("spec.provider.model provider id must be a lowercase DNS-safe identifier.");
+  }
+  const api = provider.api === undefined ? "openai-completions" : provider.api;
+  if (!PROVIDER_APIS.has(api)) {
+    throw new Error("spec.provider.api must be openai-completions or openai-responses.");
+  }
+  const models =
+    provider.models === undefined
+      ? [{ id: modelId, name: modelId }]
+      : (Array.isArray(provider.models) ? provider.models : []).map(normalizeProviderModel);
+  if (models.length === 0) {
+    throw new Error("spec.provider.models must list at least one model.");
+  }
+  // The primary model ref is resolved against this catalog, so a manifest that
+  // names a model it does not declare would provision a Gateway that cannot answer.
+  if (!models.some((entry) => entry.id === modelId)) {
+    throw new Error(`spec.provider.models must include ${modelId}.`);
+  }
+  return { model, apiKeyEnv, endpoint: { id, baseUrl, api, models } };
 }
 
 function normalizeSubscription(value, sourceCount) {
@@ -175,7 +237,6 @@ export function normalizeTenantManifest(input) {
   ) {
     throw new Error("spec.hostRoot must be an absolute directory that contains the tenant id.");
   }
-  const provider = requireRecord(spec.provider, "spec.provider");
   const documents = requireRecord(spec.documents, "spec.documents");
   const backend = requireRecord(documents.backend, "spec.documents.backend");
   const identity = requireRecord(spec.identity, "spec.identity");
@@ -246,10 +307,7 @@ export function normalizeTenantManifest(input) {
         ? identity.allowUsers.map((entry) => requireString(entry, "identity.allowUsers[]"))
         : [],
     },
-    provider: {
-      model: requireString(provider.model, "spec.provider.model"),
-      apiKeyEnv: requireEnvName(provider.apiKeyEnv, "spec.provider.apiKeyEnv"),
-    },
+    provider: normalizeProvider(spec.provider),
     documents: {
       backend: {
         baseUrl: backendBaseUrl,
@@ -296,6 +354,10 @@ export function renderTenantArtifacts(input) {
     `OPENCLAW_AUTH_PROFILE_SECRET_DIR=${path.join(secretsDir, "auth-profiles")}`,
     `OPENCLAW_GATEWAY_PORT=${tenant.gatewayPort}`,
     "OPENCLAW_GATEWAY_BIND=lan",
+    // The tenant Gateway is reached only through the TLS/identity proxy. Publishing
+    // on loopback keeps it off the host's public interfaces; the proxy still
+    // arrives from the Docker bridge, which trusted-proxy auth treats as remote.
+    "OPENCLAW_PUBLISH_ADDRESS=127.0.0.1",
     `OPENCLAW_TZ=${tenant.timezone}`,
     `AGENTBOX_TENANT_ID=${tenant.id}`,
     `AGENTBOX_BACKUP_RETENTION_DAYS=${tenant.retentionDays}`,
@@ -348,6 +410,19 @@ export function renderTenantArtifacts(input) {
     },
   };
   const configBatch = [
+    ...(tenant.provider.endpoint
+      ? [
+          {
+            path: `models.providers.${tenant.provider.endpoint.id}`,
+            value: {
+              baseUrl: tenant.provider.endpoint.baseUrl,
+              api: tenant.provider.endpoint.api,
+              apiKey: { source: "env", provider: "default", id: tenant.provider.apiKeyEnv },
+              models: tenant.provider.endpoint.models,
+            },
+          },
+        ]
+      : []),
     { path: "agents.defaults.model", value: { primary: tenant.provider.model } },
     { path: "gateway.auth", value: renderGatewayAuth(tenant) },
     ...(tenant.identity.mode === "trusted-proxy"

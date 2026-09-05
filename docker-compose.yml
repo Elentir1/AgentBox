@@ -61,9 +61,13 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
-      - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
-      - "${OPENCLAW_MSTEAMS_PORT:-3978}:3978"
+      # Compose concatenates `ports` across files, so an override cannot narrow
+      # these. Deployments that sit behind a reverse proxy set
+      # OPENCLAW_PUBLISH_ADDRESS=127.0.0.1 to keep the Gateway off public
+      # interfaces; unset keeps the previous all-interfaces behavior.
+      - "${OPENCLAW_PUBLISH_ADDRESS:-0.0.0.0}:${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+      - "${OPENCLAW_PUBLISH_ADDRESS:-0.0.0.0}:${OPENCLAW_BRIDGE_PORT:-18790}:18790"
+      - "${OPENCLAW_PUBLISH_ADDRESS:-0.0.0.0}:${OPENCLAW_MSTEAMS_PORT:-3978}:3978"
     init: true
     restart: unless-stopped
     command:

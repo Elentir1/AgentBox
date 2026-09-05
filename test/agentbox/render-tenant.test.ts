@@ -124,6 +124,12 @@ describe("AgentBox tenant renderer", () => {
     expect(batch.find((entry) => entry.path === "ui.seamColor")?.value).toBe("#dc2626");
   });
 
+  it("keeps the tenant Gateway off the host's public interfaces", () => {
+    const { files } = renderTenantArtifacts(createManifest());
+
+    expect(files[".env"]).toContain("OPENCLAW_PUBLISH_ADDRESS=127.0.0.1");
+  });
+
   it("ships an operator template without product placeholders presented as live", () => {
     const template = fs.readFileSync(
       path.join(
@@ -204,6 +210,77 @@ describe("AgentBox tenant renderer", () => {
       userHeader: "x-forwarded-user",
     };
     expect(() => normalizeTenantManifest(proxyWithoutAllowlist)).toThrow("trustedProxies");
+  });
+
+  it("declares a sovereign OpenAI-compatible endpoint before the model that uses it", () => {
+    const manifest = createManifest();
+    manifest.spec.provider = {
+      model: "infomaniak/mistral24b",
+      apiKeyEnv: "INFOMANIAK_API_KEY",
+      baseUrl: "https://api.infomaniak.com/2/ai/12345/openai/v1",
+      models: [{ id: "mistral24b", name: "Mistral 24B", contextWindow: 32_000 }],
+    } as never;
+    const { files } = renderTenantArtifacts(manifest);
+    const batch = JSON.parse(files["openclaw.batch.json"]) as Array<{
+      path: string;
+      value: unknown;
+    }>;
+    const providerIndex = batch.findIndex((entry) => entry.path === "models.providers.infomaniak");
+    const modelIndex = batch.findIndex((entry) => entry.path === "agents.defaults.model");
+
+    expect(providerIndex).toBeGreaterThanOrEqual(0);
+    expect(providerIndex).toBeLessThan(modelIndex);
+    expect(batch[providerIndex]?.value).toEqual({
+      baseUrl: "https://api.infomaniak.com/2/ai/12345/openai/v1",
+      api: "openai-completions",
+      apiKey: { source: "env", provider: "default", id: "INFOMANIAK_API_KEY" },
+      models: [{ id: "mistral24b", name: "Mistral 24B", contextWindow: 32_000 }],
+    });
+    expect(batch[modelIndex]?.value).toEqual({ primary: "infomaniak/mistral24b" });
+    expect(files["runtime.env.example"]).toContain("INFOMANIAK_API_KEY=");
+    expect(files["runtime.env.example"]).not.toMatch(/[=].+/u);
+  });
+
+  it("keeps hosted providers free of a synthetic catalog entry", () => {
+    const { files } = renderTenantArtifacts(createManifest());
+    const batch = JSON.parse(files["openclaw.batch.json"]) as Array<{ path: string }>;
+
+    expect(batch.some((entry) => entry.path.startsWith("models.providers."))).toBe(false);
+  });
+
+  it("rejects an endpoint manifest that cannot resolve its own model", () => {
+    const missingBaseUrl = createManifest();
+    missingBaseUrl.spec.provider = {
+      model: "infomaniak/mistral24b",
+      apiKeyEnv: "INFOMANIAK_API_KEY",
+      api: "openai-responses",
+    } as never;
+    expect(() => normalizeTenantManifest(missingBaseUrl)).toThrow("require spec.provider.baseUrl");
+
+    const unqualifiedModel = createManifest();
+    unqualifiedModel.spec.provider = {
+      model: "mistral24b",
+      apiKeyEnv: "INFOMANIAK_API_KEY",
+      baseUrl: "https://api.infomaniak.com/2/ai/12345/openai/v1",
+    } as never;
+    expect(() => normalizeTenantManifest(unqualifiedModel)).toThrow("<provider-id>/<model-id>");
+
+    const undeclaredModel = createManifest();
+    undeclaredModel.spec.provider = {
+      model: "infomaniak/mistral24b",
+      apiKeyEnv: "INFOMANIAK_API_KEY",
+      baseUrl: "https://api.infomaniak.com/2/ai/12345/openai/v1",
+      models: [{ id: "another-model" }],
+    } as never;
+    expect(() => normalizeTenantManifest(undeclaredModel)).toThrow("must include mistral24b");
+
+    const insecureEndpoint = createManifest();
+    insecureEndpoint.spec.provider = {
+      model: "infomaniak/mistral24b",
+      apiKeyEnv: "INFOMANIAK_API_KEY",
+      baseUrl: "http://api.infomaniak.test/v1",
+    } as never;
+    expect(() => normalizeTenantManifest(insecureEndpoint)).toThrow("HTTPS");
   });
 
   it("slows the rendered sync cadence to the plan floor", () => {

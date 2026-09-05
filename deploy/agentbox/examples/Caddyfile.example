@@ -1,0 +1,44 @@
+# TLS termination for one AgentBox tenant. Reference material only: nothing in
+# this repository installs or manages a proxy.
+#
+# The rendered tenant .env pins OPENCLAW_PUBLISH_ADDRESS=127.0.0.1, so the
+# Gateway listens only on loopback and this proxy is the sole way in.
+#
+# TLS is required even for a token-mode operator box: the renderer sets
+# gateway.controlUi.allowedOrigins to spec.publicOrigin, so reaching the Gateway
+# by IP is refused, and the Control UI WebSocket must be wss://.
+
+# Replace with spec.publicOrigin from the tenant manifest.
+agentbox.example.ch {
+	encode zstd gzip
+
+	# Replace 18789 with spec.gatewayPort. reverse_proxy upgrades WebSocket
+	# connections on its own, which the Control UI needs.
+	reverse_proxy 127.0.0.1:18789
+}
+
+# ---------------------------------------------------------------------------
+# Employee tenants: identity-aware proxy
+#
+# The block above is enough for token mode, where the only user is an AlpenData
+# operator holding the Gateway token. It is NOT enough for employees.
+#
+# An employee tenant needs an identity-aware proxy in front, and that proxy is
+# part of the security boundary. It must:
+#
+#   1. authenticate the employee against the customer's identity provider;
+#   2. OVERWRITE, never forward, the configured user header;
+#   3. OVERWRITE x-openclaw-scopes from a server-side group mapping
+#        employee: operator.read,operator.write
+#        admin:    operator.read,operator.write,operator.admin
+#   4. connect from an address listed in gateway.trustedProxies;
+#   5. leave no path that reaches the Gateway without passing through it.
+#
+# A scope value copied from the browser is an authorization bypass. Caddy alone
+# does not authenticate users; pair it with an OIDC forward-auth service, or use
+# a proxy that speaks OIDC natively.
+#
+# Trusted-proxy mode also rejects a request whose source is loopback unless
+# gateway.auth.trustedProxy.allowLoopback is set. A proxy in a container on the
+# same host arrives from the Docker bridge and is treated as remote, which is
+# what you want. See docs/gateway/trusted-proxy-auth.md before shipping this.

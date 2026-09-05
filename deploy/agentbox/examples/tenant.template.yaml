@@ -24,6 +24,16 @@ spec:
   provider:
     model: openai/gpt-5.5
     apiKeyEnv: OPENAI_API_KEY
+    # For a sovereign or self-hosted OpenAI-compatible endpoint, add baseUrl and
+    # name the model <provider-id>/<model-id>. The renderer then declares
+    # models.providers.<provider-id> before the model reference. Omit baseUrl to
+    # use a bundled hosted provider, as above.
+    # model: <provider-id>/<model-id>
+    # apiKeyEnv: <PROVIDER>_API_KEY
+    # baseUrl: https://<openai-compatible-endpoint>/v1
+    # models:
+    #   - id: <model-id>
+    #     name: <model-display-name>
   # The plan the customer bought. Quotas are enforced by the tenant runtime, so a
   # tier change is a manifest change plus `openclaw config set --batch-file`.
   # See docs/agentbox/pricing.md. Seat counts are contractual and are not listed

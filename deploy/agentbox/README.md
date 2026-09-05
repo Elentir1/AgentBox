@@ -13,10 +13,17 @@ These are operator jobs. The renderer records them; it does not perform them.
 
 - Linux host or VM dedicated to one customer
 - encrypted host volume mounted under `/var/lib/agentbox/<tenant-id>`
-- Docker Engine with Compose v2
+- Docker Engine 24.0.0 or newer with Compose v2.26.1 or newer
 - HTTPS identity-aware reverse proxy that overwrites user and scope headers
 - OpenSSL, Node.js 22.19 or newer, and curl
-- isolated RAGFlow dataset and API key, outside this Compose project
+- a checkout of this repository with dependencies installed (`pnpm install`).
+  `render-tenant.mjs` imports the `yaml` package, so plain Node without
+  `node_modules` fails with `Cannot find package 'yaml'`.
+- isolated RAGFlow dataset and API key, outside this Compose project. RAGFlow
+  itself wants CPU >= 4 cores, RAM >= 16 GB, disk >= 50 GB, and
+  `vm.max_map_count >= 262144`. Since RAGFlow v0.22 only the slim image ships,
+  so it also needs an external embedding service; see
+  `examples/ragflow.env.example`.
 - AlpenData Entra app + customer admin consent for Microsoft 365
 - AlpenData Google Cloud OAuth client + operator refresh token for Drive
 - Infomaniak kDrive app password
@@ -48,6 +55,19 @@ The renderer writes:
 
 The renderer requires `spec.identity.mode`. Employee tenants use
 `trusted-proxy`. Token mode is AlpenData operator access only.
+
+`spec.provider` accepts an optional `baseUrl` for an OpenAI-compatible endpoint
+such as a sovereign Swiss or European model service. When it is set, `model`
+must read `<provider-id>/<model-id>`, and the renderer declares
+`models.providers.<provider-id>` before the model reference that resolves
+against it. Without `baseUrl` the tenant uses a bundled hosted provider and no
+catalog entry is written.
+
+The rendered `.env` pins `OPENCLAW_PUBLISH_ADDRESS=127.0.0.1`, so the tenant
+Gateway is never published on the host's public interfaces. Compose concatenates
+`ports` across files, so this is set through the environment rather than the
+override. Reach the Gateway only through the TLS or identity proxy; see
+`examples/Caddyfile.example`.
 
 The renderer rejects a root host directory, a host root that does not contain
 the tenant id, a RAGFlow dataset that is not scoped to the tenant id, insecure
