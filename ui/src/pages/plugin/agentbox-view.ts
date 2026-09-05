@@ -40,17 +40,10 @@ function formatBytes(bytes: number): string {
 }
 
 function storageLabel(subscription: AgentBoxUiSubscription): string {
-  const { storage } = subscription.usage;
-  const used = formatBytes(storage.bytes);
-  const total = formatBytes(subscription.quotas.maxStorageBytes);
-  // A partial total would otherwise read as free headroom the plan does not have.
-  return storage.kind === "partial"
-    ? t("agentbox.plan.storagePartial", {
-        used,
-        total,
-        unmeasured: String(storage.unmeasuredDocuments),
-      })
-    : t("agentbox.plan.storage", { used, total });
+  return t("agentbox.plan.storage", {
+    used: formatBytes(subscription.usage.bytes),
+    total: formatBytes(subscription.quotas.maxStorageBytes),
+  });
 }
 
 /**
@@ -69,12 +62,12 @@ function subscriptionNotice(subscription: AgentBoxUiSubscription): string | null
   return key ? t(key) : null;
 }
 
-function backendMessage(status: AgentBoxUiStatus | null): string | null {
+function indexMessage(status: AgentBoxUiStatus | null): string | null {
   if (!status) {
     return null;
   }
-  if (status.backend?.state === "error") {
-    return status.backend.error || "RAGFlow is unreachable.";
+  if (status.index?.state === "error") {
+    return status.index.error || "The document index is unavailable.";
   }
   return null;
 }
@@ -95,8 +88,8 @@ export function renderAgentBox(props: {
   const sources = status?.sources ?? [];
   const totalDocuments = sources.reduce((sum, source) => sum + source.indexed, 0);
   const sourceErrors = sources.filter((source) => source.state === "error");
-  const backendError = backendMessage(status);
-  const visibleError = state.error || backendError;
+  const indexError = indexMessage(status);
+  const visibleError = state.error || indexError;
   const subscription = status?.subscription;
   const notice = subscription ? subscriptionNotice(subscription) : null;
 
@@ -163,7 +156,7 @@ export function renderAgentBox(props: {
             </div>
           `
         : nothing}
-      ${sources.length > 0 && totalDocuments === 0 && sourceErrors.length === 0 && !backendError
+      ${sources.length > 0 && totalDocuments === 0 && sourceErrors.length === 0 && !indexError
         ? html`
             <div class="card">
               <div class="card-title">No documents indexed yet</div>

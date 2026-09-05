@@ -62,7 +62,7 @@ describeControlUiE2e("AgentBox employee experience", () => {
           tenantId: "pilot",
           running: true,
           syncInProgress: false,
-          backend: { state: "ready" },
+          index: { state: "ready" },
           sources: [],
         },
       },
@@ -101,7 +101,7 @@ describeControlUiE2e("AgentBox employee experience", () => {
     }
   });
 
-  it("surfaces a RAGFlow backend error instead of an all-clear checklist", async () => {
+  it("surfaces a document index error instead of an all-clear checklist", async () => {
     const context = await browser.newContext({
       locale: "en-US",
       serviceWorkers: "block",
@@ -115,9 +115,9 @@ describeControlUiE2e("AgentBox employee experience", () => {
           tenantId: "pilot",
           running: true,
           syncInProgress: false,
-          backend: {
+          index: {
             state: "error",
-            error: "RAGFlow is unreachable: ECONNREFUSED",
+            error: "The document index is unavailable: embedding endpoint refused the connection",
           },
           sources: [
             {
@@ -128,7 +128,7 @@ describeControlUiE2e("AgentBox employee experience", () => {
               uploaded: 0,
               deleted: 0,
               skipped: 0,
-              error: "RAGFlow is unreachable: ECONNREFUSED",
+              error: "The document index is unavailable: embedding endpoint refused the connection",
             },
           ],
         },
@@ -140,7 +140,7 @@ describeControlUiE2e("AgentBox employee experience", () => {
       const sidebar = page.locator("openclaw-app-sidebar");
       await sidebar.getByRole("link", { name: "Company documents" }).click();
       await expect
-        .poll(() => page.getByRole("alert").filter({ hasText: "RAGFlow" }).count())
+        .poll(() => page.getByRole("alert").filter({ hasText: "document index" }).count())
         .toBe(1);
       await expect
         .poll(() => page.getByText("Every source synchronized successfully").count())
@@ -164,7 +164,7 @@ describeControlUiE2e("AgentBox employee experience", () => {
           tenantId: "pilot",
           running: true,
           syncInProgress: false,
-          backend: { state: "ready" },
+          index: { state: "ready" },
           subscription: {
             planId: "starter",
             state: "suspended",
@@ -174,7 +174,7 @@ describeControlUiE2e("AgentBox employee experience", () => {
               maxStorageBytes: 10_737_418_240,
               minSyncIntervalMinutes: 60,
             },
-            usage: { documents: 120, storage: { kind: "measured", bytes: 2_147_483_648 } },
+            usage: { documents: 120, bytes: 2_147_483_648 },
           },
           sources: [
             {

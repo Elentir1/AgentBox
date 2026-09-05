@@ -33,9 +33,35 @@ implemented; the **prices, tier names, and durations** are commercial inputs.
 | Seats (contractual)            | 25      | 100      | unlimited            |
 | Backup retention               | 30 days | 90 days  | 365 days             |
 
-Setup covers the dedicated VM, the isolated RAGFlow, the identity-aware proxy, the
-Entra or Google consent flow, and the corpus checklist in
-[AgentBox](/agentbox/index). None of it is automated in this version.
+Setup covers the dedicated deployment, the identity-aware proxy, the Entra or
+Google consent flow, and the corpus checklist in [AgentBox](/agentbox/index).
+None of it is automated in this version.
+
+The document index runs inside the tenant deployment, so the per-customer cost is
+the deployment itself plus embedding calls, not a search cluster. Embedding
+consumption is the variable cost to watch when setting these prices.
+
+### Measured index cost
+
+Synthetic benchmark, 1024-dimension vectors, 12 chunks per document, float32
+vectors on disk:
+
+| Corpus           | Index on disk | One query (full scan) |
+| ---------------- | ------------- | --------------------- |
+| 2'000 documents  | 142 MB        | ~0.3 s                |
+| 5'000 documents  | ~350 MB       | ~0.8 s                |
+| 25'000 documents | ~1.8 GB       | ~4 s                  |
+
+About 73 KB of index per document. Retrieval streams the chunk table, so peak
+query memory stays near 14 MB regardless of corpus size; only query _time_ grows.
+
+<Warning>
+Retrieval is a linear scan. It is comfortable to roughly 5'000 documents and
+becomes visibly slow well before the 25'000 and 50'000 rows in the table above.
+Those tiers need an approximate-nearest-neighbour index (for example the
+`sqlite-vec` extension) before they can be sold. Measure on the customer's real
+corpus before quoting anything above Starter.
+</Warning>
 
 ## What the quota names mean
 
@@ -47,10 +73,8 @@ one-to-one to `spec.subscription.quotas` in the tenant manifest and to the
   configuration loads: an over-quota tenant refuses to start rather than syncing
   a source the customer has not bought.
 - `maxDocuments` — documents indexed for this AgentBox, all sources combined.
-  The runtime document index is capped at 50'000 entries per deployment
-  (`AGENTBOX_STATE_MAX_ENTRIES` in `extensions/agentbox/src/state.ts`), so no tier
-  may promise more. A larger corpus needs a second AgentBox, which is also what the
-  isolation model wants when two document groups differ.
+  Retrieval scans the tenant's chunk table, so this quota is also the latency
+  budget. See the measured index cost above before raising a tier.
 - `maxStorageBytes` — total size of those documents.
 - `minSyncIntervalMinutes` — floor on `sync.intervalMinutes`. A faster interval is
   a configuration error, not a silent clamp.

@@ -238,7 +238,7 @@ export function normalizeTenantManifest(input) {
     throw new Error("spec.hostRoot must be an absolute directory that contains the tenant id.");
   }
   const documents = requireRecord(spec.documents, "spec.documents");
-  const backend = requireRecord(documents.backend, "spec.documents.backend");
+  const embedding = requireRecord(documents.embedding, "spec.documents.embedding");
   const identity = requireRecord(spec.identity, "spec.identity");
   const identityModeRaw = requireString(identity.mode, "spec.identity.mode");
   if (identityModeRaw !== "trusted-proxy" && identityModeRaw !== "token") {
@@ -259,16 +259,20 @@ export function normalizeTenantManifest(input) {
   if (!Number.isInteger(gatewayPort) || gatewayPort < 1024 || gatewayPort > 65535) {
     throw new Error("spec.gatewayPort must be an integer between 1024 and 65535.");
   }
-  const backendBaseUrl = requireHttpUrl(backend.baseUrl, "spec.documents.backend.baseUrl");
-  const datasetId = requireString(backend.datasetId, "spec.documents.backend.datasetId");
-  if (datasetId !== id && !datasetId.startsWith(`${id}-`)) {
-    throw new Error("spec.documents.backend.datasetId must be scoped to the tenant id.");
-  }
-  const backendAllowsPrivateNetwork = backend.allowPrivateNetwork === true;
-  if (backendBaseUrl.startsWith("http://") && !backendAllowsPrivateNetwork) {
+  const embeddingBaseUrl = requireHttpUrl(embedding.baseUrl, "spec.documents.embedding.baseUrl");
+  const embeddingAllowsPrivateNetwork = embedding.allowPrivateNetwork === true;
+  // Document text is sent to this endpoint, so plaintext HTTP is an explicit,
+  // private-network-only acknowledgement rather than a default.
+  if (embeddingBaseUrl.startsWith("http://") && !embeddingAllowsPrivateNetwork) {
     throw new Error(
-      "HTTP document backends require spec.documents.backend.allowPrivateNetwork: true.",
+      "HTTP embedding endpoints require spec.documents.embedding.allowPrivateNetwork: true.",
     );
+  }
+  if (
+    embedding.dimensions !== undefined &&
+    (!Number.isInteger(embedding.dimensions) || embedding.dimensions < 1)
+  ) {
+    throw new Error("spec.documents.embedding.dimensions must be a positive integer.");
   }
   return {
     id,
@@ -309,11 +313,12 @@ export function normalizeTenantManifest(input) {
     },
     provider: normalizeProvider(spec.provider),
     documents: {
-      backend: {
-        baseUrl: backendBaseUrl,
-        datasetId,
-        apiKeyEnv: requireEnvName(backend.apiKeyEnv, "spec.documents.backend.apiKeyEnv"),
-        allowPrivateNetwork: backendAllowsPrivateNetwork,
+      embedding: {
+        baseUrl: embeddingBaseUrl,
+        model: requireString(embedding.model, "spec.documents.embedding.model"),
+        apiKeyEnv: requireEnvName(embedding.apiKeyEnv, "spec.documents.embedding.apiKeyEnv"),
+        ...(embedding.dimensions === undefined ? {} : { dimensions: embedding.dimensions }),
+        allowPrivateNetwork: embeddingAllowsPrivateNetwork,
       },
       sources,
     },
@@ -394,7 +399,7 @@ export function renderTenantArtifacts(input) {
     enabled: true,
     config: {
       tenantId: tenant.id,
-      backend: tenant.documents.backend,
+      index: { embedding: tenant.documents.embedding },
       entitlements: tenant.subscription,
       // The product default only applies when the plan allows it; a slower plan
       // floor wins so the rendered config never asks for a cadence it cannot buy.
@@ -436,7 +441,7 @@ export function renderTenantArtifacts(input) {
   const secretNames = new Set([
     "OPENCLAW_GATEWAY_TOKEN",
     tenant.provider.apiKeyEnv,
-    tenant.documents.backend.apiKeyEnv,
+    tenant.documents.embedding.apiKeyEnv,
   ]);
   for (const source of tenant.documents.sources) {
     for (const key of [

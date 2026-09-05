@@ -2,18 +2,17 @@
   "fallbackKeys": [
     "agentbox.plan.limitNote",
     "agentbox.plan.storage",
-    "agentbox.plan.storagePartial",
     "agentbox.plan.summary",
     "agentbox.plan.title",
     "agentbox.subscription.grace",
     "agentbox.subscription.suspended"
   ],
-  "generatedAt": "2026-09-05T11:54:20.898Z",
+  "generatedAt": "2026-09-05T13:52:41.478Z",
   "locale": "vi",
   "model": "gpt-5.5",
   "provider": "openai",
-  "sourceHash": "d031347af3dcb18ea8479e3a528c4a315d84a1a56c83b39aa91085628db5f024",
-  "totalKeys": 1687,
+  "sourceHash": "d4d0b18c52398c3f6cc961bb3a1a11c5f901235dcadda5ae76f7134dbac92cbd",
+  "totalKeys": 1686,
   "translatedKeys": 1680,
   "workflow": 1
 }

@@ -12,10 +12,6 @@ export type AgentBoxUiSource = {
   error?: string;
 };
 
-export type AgentBoxUiStorageUsage =
-  | { kind: "measured"; bytes: number }
-  | { kind: "partial"; bytes: number; unmeasuredDocuments: number };
-
 export type AgentBoxUiSubscription = {
   planId: string;
   state: "active" | "grace" | "suspended";
@@ -26,7 +22,7 @@ export type AgentBoxUiSubscription = {
     maxStorageBytes: number;
     minSyncIntervalMinutes: number;
   };
-  usage: { documents: number; storage: AgentBoxUiStorageUsage };
+  usage: { documents: number; bytes: number };
 };
 
 export type AgentBoxUiStatus = {
@@ -35,7 +31,7 @@ export type AgentBoxUiStatus = {
   syncInProgress: boolean;
   lastSyncStartedAt?: string;
   lastSyncCompletedAt?: string;
-  backend?: {
+  index?: {
     state: "ready" | "error";
     error?: string;
   };

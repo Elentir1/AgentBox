@@ -4,27 +4,6 @@ import type {
   PluginStateKeyedStore,
 } from "openclaw/plugin-sdk/plugin-state-runtime";
 
-export type AgentBoxDocumentState = {
-  kind: "document";
-  sourceId: string;
-  sourceKey: string;
-  fingerprint: string;
-  documentId: string;
-  name: string;
-  sourceUrl?: string;
-  // Recorded from the uploaded payload so storage quota accounting never has to
-  // re-download the corpus. Records written before quotas shipped have none, and
-  // indexTotals reports them separately instead of counting them as zero bytes.
-  sizeBytes?: number;
-};
-
-/** Corpus size facts behind the maxDocuments and maxStorageBytes quotas. */
-export type AgentBoxIndexTotals = {
-  documents: number;
-  measuredDocuments: number;
-  bytes: number;
-};
-
 export type AgentBoxAuditEvent = {
   kind: "audit";
   at: string;
@@ -34,40 +13,22 @@ export type AgentBoxAuditEvent = {
   queryDigest?: string;
   queryPreview?: string;
   resultCount?: number;
-  droppedCount?: number;
   documentIds?: string[];
   uploaded?: number;
   deleted?: number;
 };
 
-type AgentBoxCursorState = {
-  kind: "cursor";
-  sourceId: string;
-  cursor: string;
+export type AgentBoxAuditStore = {
+  append: (event: AgentBoxAuditEvent) => Promise<void>;
+  list: (limit?: number) => Promise<AgentBoxAuditEvent[]>;
 };
 
-type AgentBoxDocumentRecord = AgentBoxDocumentState | AgentBoxCursorState;
-
-export type AgentBoxStateStore = {
-  documentsForSource: (sourceId: string) => Promise<AgentBoxDocumentState[]>;
-  authorizedDocumentIds: () => Promise<Set<string>>;
-  indexTotals: () => Promise<AgentBoxIndexTotals>;
-  cursorForSource: (sourceId: string) => Promise<string | undefined>;
-  putDocument: (entry: AgentBoxDocumentState) => Promise<void>;
-  deleteDocument: (sourceKey: string) => Promise<void>;
-  putCursor: (sourceId: string, cursor: string) => Promise<void>;
-  appendAudit: (event: AgentBoxAuditEvent) => Promise<void>;
-  listAudit: (limit?: number) => Promise<AgentBoxAuditEvent[]>;
-};
-
-const AGENTBOX_STATE_NAMESPACE = "documents";
 const AGENTBOX_AUDIT_NAMESPACE = "audit";
-const AGENTBOX_STATE_MAX_ENTRIES = 50_100;
 const AGENTBOX_AUDIT_MAX_ENTRIES = 10_000;
 const AGENTBOX_AUDIT_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
-function stateKey(prefix: string, value: string): string {
-  return `${prefix}:${createHash("sha256").update(value, "utf8").digest("hex")}`;
+function auditKey(value: string): string {
+  return `audit:${createHash("sha256").update(value, "utf8").digest("hex")}`;
 }
 
 export function digestSearchQuery(query: string): { queryDigest: string; queryPreview: string } {
@@ -78,15 +39,15 @@ export function digestSearchQuery(query: string): { queryDigest: string; queryPr
   };
 }
 
-export function createAgentBoxStateStore(
+/**
+ * The audit trail is a bounded, expiring log, which is what the plugin state
+ * store is for. The document corpus lives in the plugin's own SQLite index
+ * instead: chunk counts exceed the per-plugin entry budget by design.
+ */
+export function createAgentBoxAuditStore(
   openKeyedStore: <T>(options: OpenKeyedStoreOptions) => PluginStateKeyedStore<T>,
-): AgentBoxStateStore {
-  const openDocuments = () =>
-    openKeyedStore<AgentBoxDocumentRecord>({
-      namespace: AGENTBOX_STATE_NAMESPACE,
-      maxEntries: AGENTBOX_STATE_MAX_ENTRIES,
-    });
-  const openAudit = () =>
+): AgentBoxAuditStore {
+  const open = () =>
     openKeyedStore<AgentBoxAuditEvent>({
       namespace: AGENTBOX_AUDIT_NAMESPACE,
       maxEntries: AGENTBOX_AUDIT_MAX_ENTRIES,
@@ -94,66 +55,15 @@ export function createAgentBoxStateStore(
       defaultTtlMs: AGENTBOX_AUDIT_TTL_MS,
     });
   return {
-    async documentsForSource(sourceId) {
-      return (await openDocuments().entries())
+    async append(event) {
+      await open().register(auditKey(`${event.at}:${event.action}:${event.actor}`), event);
+    },
+    async list(limit = 50) {
+      const entries = await open().entries();
+      return entries
         .map((entry) => entry.value)
-        .filter(
-          (entry): entry is AgentBoxDocumentState =>
-            entry.kind === "document" && entry.sourceId === sourceId,
-        );
-    },
-    async authorizedDocumentIds() {
-      return new Set(
-        (await openDocuments().entries())
-          .map((entry) => entry.value)
-          .filter((entry): entry is AgentBoxDocumentState => entry.kind === "document")
-          .map((entry) => entry.documentId),
-      );
-    },
-    async indexTotals() {
-      const documents = (await openDocuments().entries())
-        .map((entry) => entry.value)
-        .filter((entry): entry is AgentBoxDocumentState => entry.kind === "document");
-      let measuredDocuments = 0;
-      let bytes = 0;
-      for (const document of documents) {
-        if (typeof document.sizeBytes === "number") {
-          measuredDocuments += 1;
-          bytes += document.sizeBytes;
-        }
-      }
-      return { documents: documents.length, measuredDocuments, bytes };
-    },
-    async cursorForSource(sourceId) {
-      const entry = await openDocuments().lookup(stateKey("cursor", sourceId));
-      return entry?.kind === "cursor" ? entry.cursor : undefined;
-    },
-    async putDocument(entry) {
-      await openDocuments().register(stateKey("document", entry.sourceKey), entry);
-    },
-    async deleteDocument(sourceKey) {
-      await openDocuments().delete(stateKey("document", sourceKey));
-    },
-    async putCursor(sourceId, cursor) {
-      await openDocuments().register(stateKey("cursor", sourceId), {
-        kind: "cursor",
-        sourceId,
-        cursor,
-      });
-    },
-    async appendAudit(event) {
-      await openAudit().register(stateKey("audit", `${event.at}:${event.action}:${event.actor}`), {
-        ...event,
-        kind: "audit",
-      });
-    },
-    async listAudit(limit = 50) {
-      const bounded = Math.max(1, Math.min(200, Math.floor(limit)));
-      return (await openAudit().entries())
-        .map((entry) => entry.value)
-        .filter((entry) => entry.kind === "audit")
         .toSorted((left, right) => right.at.localeCompare(left.at))
-        .slice(0, bounded);
+        .slice(0, limit);
     },
   };
 }

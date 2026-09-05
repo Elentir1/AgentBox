@@ -33,10 +33,10 @@ function createManifest() {
         },
       },
       documents: {
-        backend: {
-          baseUrl: "http://ragflow.internal:9380",
-          datasetId: "acme",
-          apiKeyEnv: "RAGFLOW_API_KEY",
+        embedding: {
+          baseUrl: "http://embeddings.internal:8080/v1",
+          model: "bge-multilingual",
+          apiKeyEnv: "AGENTBOX_EMBEDDING_API_KEY",
           allowPrivateNetwork: true,
         },
         sources: [
@@ -112,6 +112,7 @@ describe("AgentBox tenant renderer", () => {
         ]),
       },
     });
+    expect(files["runtime.env.example"]).toContain("AGENTBOX_EMBEDDING_API_KEY=");
     expect(files["runtime.env.example"]).toContain("AGENTBOX_MS_CLIENT_SECRET=");
     expect(files["runtime.env.example"]).toContain("AGENTBOX_GOOGLE_REFRESH_TOKEN=");
     expect(files["runtime.env.example"]).not.toMatch(/=.+/u);
@@ -171,9 +172,9 @@ describe("AgentBox tenant renderer", () => {
     sharedRoot.spec.hostRoot = "/var/lib/agentbox/shared";
     expect(() => normalizeTenantManifest(sharedRoot)).toThrow("tenant id");
 
-    const foreignDataset = createManifest();
-    foreignDataset.spec.documents.backend.datasetId = "other-company";
-    expect(() => normalizeTenantManifest(foreignDataset)).toThrow("tenant id");
+    const insecureEmbedding = createManifest();
+    insecureEmbedding.spec.documents.embedding.allowPrivateNetwork = false;
+    expect(() => normalizeTenantManifest(insecureEmbedding)).toThrow("allowPrivateNetwork");
 
     const insecureWebDav = createManifest();
     insecureWebDav.spec.documents.sources[2].baseUrl = "http://cloud.example.test";
@@ -322,14 +323,14 @@ describe("AgentBox tenant renderer", () => {
     second.metadata.id = "contoso";
     second.metadata.displayName = "Contoso SA";
     second.spec.hostRoot = "/var/lib/agentbox/contoso";
-    second.spec.documents.backend.datasetId = "contoso-internal";
     const contoso = renderTenantArtifacts(second);
 
     expect(acme.files["docker-compose.override.yml"]).toContain("name: agentbox-acme");
     expect(contoso.files["docker-compose.override.yml"]).toContain("name: agentbox-contoso");
     expect(acme.tenant.hostRoot).not.toBe(contoso.tenant.hostRoot);
-    expect(acme.tenant.documents.backend.datasetId).not.toBe(
-      contoso.tenant.documents.backend.datasetId,
-    );
+    // The corpus now lives in each tenant's own state volume, so separate state
+    // directories are the isolation boundary that used to be a separate dataset.
+    expect(acme.files[".env"]).toContain("OPENCLAW_CONFIG_DIR=/var/lib/agentbox/acme/state");
+    expect(contoso.files[".env"]).toContain("OPENCLAW_CONFIG_DIR=/var/lib/agentbox/contoso/state");
   });
 });

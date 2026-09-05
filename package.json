@@ -1340,6 +1340,10 @@
       "types": "./dist/plugin-sdk/document-extractor.d.ts",
       "default": "./dist/plugin-sdk/document-extractor.js"
     },
+    "./plugin-sdk/document-extraction-runtime": {
+      "types": "./dist/plugin-sdk/document-extraction-runtime.d.ts",
+      "default": "./dist/plugin-sdk/document-extraction-runtime.js"
+    },
     "./plugin-sdk/web-content-extractor": {
       "types": "./dist/plugin-sdk/web-content-extractor.d.ts",
       "default": "./dist/plugin-sdk/web-content-extractor.js"

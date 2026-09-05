@@ -47,10 +47,10 @@ spec:
       maxStorageBytes: 53687091200
       minSyncIntervalMinutes: 15
   documents:
-    backend:
-      baseUrl: https://<ragflow-host>
-      datasetId: <tenant-id>-internal
-      apiKeyEnv: AGENTBOX_RAGFLOW_API_KEY
+    embedding:
+      baseUrl: https://api.infomaniak.com/2/ai/<product_id>/openai/v1
+      model: <embedding-model-id>
+      apiKeyEnv: AGENTBOX_EMBEDDING_API_KEY
       allowPrivateNetwork: false
     sources:
       - id: microsoft-365

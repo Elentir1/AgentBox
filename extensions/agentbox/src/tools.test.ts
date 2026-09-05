@@ -1,143 +1,85 @@
-import { describe, expect, it, vi } from "vitest";
+import fs from "node:fs";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { AgentBoxConfig } from "./config.js";
+import type { AgentBoxIndexStore } from "./index-store.js";
 import { AgentBoxService } from "./service.js";
-import type { AgentBoxDocumentState, AgentBoxStateStore } from "./state.js";
+import {
+  createTestAuditStore,
+  createTestEmbedder,
+  createTestIndexStore,
+  embedForTests,
+  testEntitlements,
+  testIndexConfig,
+} from "./test-helpers.js";
 import { createAgentBoxSearchTool } from "./tools.js";
 
+const temporaryDirectories: string[] = [];
+const openStores: AgentBoxIndexStore[] = [];
+
+afterEach(() => {
+  for (const store of openStores.splice(0)) {
+    store.close();
+  }
+  for (const directory of temporaryDirectories.splice(0)) {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+const config: AgentBoxConfig = {
+  tenantId: "acme",
+  entitlements: testEntitlements(),
+  index: testIndexConfig(),
+  sync: { intervalMinutes: 15, maxFileBytes: 1024 },
+  sources: [{ id: "local", type: "local", root: "/documents" }],
+};
+
+function createService(seed: (store: AgentBoxIndexStore) => void): AgentBoxService {
+  const store = createTestIndexStore({ directories: temporaryDirectories });
+  openStores.push(store);
+  seed(store);
+  return new AgentBoxService(config, store, createTestEmbedder(), createTestAuditStore().store, {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  });
+}
+
 describe("AgentBox search tool", () => {
-  it("returns numbered citations for authorized company documents", async () => {
-    const state: AgentBoxStateStore = {
-      documentsForSource: async () => [],
-      authorizedDocumentIds: async () => new Set(["doc-leave"]),
-      indexTotals: async () => ({ documents: 1, measuredDocuments: 1, bytes: 32 }),
-      cursorForSource: async () => undefined,
-      putDocument: async () => undefined,
-      deleteDocument: async () => undefined,
-      putCursor: async () => undefined,
-      appendAudit: async () => undefined,
-      listAudit: async () => [],
-    };
-    const indexed: AgentBoxDocumentState = {
-      kind: "document",
-      sourceId: "local",
-      sourceKey: "local:leave-policy.md",
-      fingerprint: "policy",
-      documentId: "doc-leave",
-      name: "leave-policy.md",
-    };
-    await state.putDocument(indexed);
-    const service = new AgentBoxService(
-      {
-        tenantId: "acme",
-        entitlements: {
-          planId: "business",
-          status: "active",
-          quotas: {
-            maxSources: 4,
-            maxDocuments: 25_000,
-            maxStorageBytes: 53_687_091_200,
-            minSyncIntervalMinutes: 15,
-          },
+  it("returns numbered citations for indexed company documents", async () => {
+    const service = createService((store) => {
+      const text = "Employees receive 25 days of paid leave each year.";
+      store.putDocument(
+        {
+          sourceKey: "local:leave-policy.md",
+          sourceId: "local",
+          documentId: "doc-leave",
+          name: "leave-policy.md",
+          fingerprint: "policy",
+          sizeBytes: text.length,
         },
-        backend: {
-          baseUrl: "https://ragflow.example.test",
-          datasetId: "acme",
-          apiKeyEnv: "RAGFLOW_API_KEY",
-          allowPrivateNetwork: false,
-        },
-        sync: { intervalMinutes: 15, maxFileBytes: 1024 },
-        sources: [{ id: "local", type: "local", root: "/documents" }],
-      },
-      {
-        ...state,
-        authorizedDocumentIds: async () => new Set(["doc-leave"]),
-      },
-      { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-      {
-        client: {
-          upload: vi.fn(async () => "unused"),
-          delete: vi.fn(async () => undefined),
-          search: vi.fn(async () => [
-            {
-              content: "Employees receive 25 days of paid leave.",
-              documentId: "doc-leave",
-              documentName: "leave-policy.md",
-              similarity: 0.9,
-            },
-          ]),
-        },
-      },
-    );
+        [{ text, embedding: embedForTests(text) }],
+      );
+    });
     const tool = createAgentBoxSearchTool(() => service);
 
-    const result = await tool.execute("call-1", { query: "leave days" });
+    const result = await tool.execute("call-1", { query: "how much leave?" });
+    const text = result.content[0]?.type === "text" ? result.content[0].text : "";
 
-    expect(result.content[0]).toMatchObject({
-      type: "text",
-      text: expect.stringContaining("[1] leave-policy.md"),
-    });
-    expect(result.details).toEqual({
-      citations: [
-        {
-          index: 1,
-          documentId: "doc-leave",
-          documentName: "leave-policy.md",
-          similarity: 0.9,
-        },
-      ],
-    });
+    expect(text).toContain("[1] leave-policy.md");
+    expect(text).toContain("25 days");
+    expect((result.details as { citations?: unknown }).citations).toMatchObject([
+      { index: 1, documentId: "doc-leave" },
+    ]);
   });
 
   it("tells the model when the company corpus has no match", async () => {
-    const service = new AgentBoxService(
-      {
-        tenantId: "acme",
-        entitlements: {
-          planId: "business",
-          status: "active",
-          quotas: {
-            maxSources: 4,
-            maxDocuments: 25_000,
-            maxStorageBytes: 53_687_091_200,
-            minSyncIntervalMinutes: 15,
-          },
-        },
-        backend: {
-          baseUrl: "https://ragflow.example.test",
-          datasetId: "acme",
-          apiKeyEnv: "RAGFLOW_API_KEY",
-          allowPrivateNetwork: false,
-        },
-        sync: { intervalMinutes: 15, maxFileBytes: 1024 },
-        sources: [{ id: "local", type: "local", root: "/documents" }],
-      },
-      {
-        documentsForSource: async () => [],
-        authorizedDocumentIds: async () => new Set(),
-        indexTotals: async () => ({ documents: 0, measuredDocuments: 0, bytes: 0 }),
-        cursorForSource: async () => undefined,
-        putDocument: async () => undefined,
-        deleteDocument: async () => undefined,
-        putCursor: async () => undefined,
-        appendAudit: async () => undefined,
-        listAudit: async () => [],
-      },
-      { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-      {
-        client: {
-          upload: vi.fn(async () => "unused"),
-          delete: vi.fn(async () => undefined),
-          search: vi.fn(async () => []),
-        },
-      },
-    );
+    const service = createService(() => undefined);
     const tool = createAgentBoxSearchTool(() => service);
 
-    const result = await tool.execute("call-2", { query: "secret salary bands" });
+    const result = await tool.execute("call-2", { query: "how much leave?" });
+    const text = result.content[0]?.type === "text" ? result.content[0].text : "";
 
-    expect(result.content[0]).toMatchObject({
-      type: "text",
-      text: "No authorized company document matched this question.",
-    });
-    expect(result.details).toEqual({ citations: [] });
+    expect(text).toBe("No authorized company document matched this question.");
+    expect((result.details as { citations?: unknown }).citations).toEqual([]);
   });
 });

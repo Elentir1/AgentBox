@@ -19,11 +19,9 @@ These are operator jobs. The renderer records them; it does not perform them.
 - a checkout of this repository with dependencies installed (`pnpm install`).
   `render-tenant.mjs` imports the `yaml` package, so plain Node without
   `node_modules` fails with `Cannot find package 'yaml'`.
-- isolated RAGFlow dataset and API key, outside this Compose project. RAGFlow
-  itself wants CPU >= 4 cores, RAM >= 16 GB, disk >= 50 GB, and
-  `vm.max_map_count >= 262144`. Since RAGFlow v0.22 only the slim image ships,
-  so it also needs an external embedding service; see
-  `examples/ragflow.env.example`.
+- an OpenAI-compatible embedding endpoint and its API key. The document index
+  itself is a SQLite file inside the tenant volume, so there is no search server
+  to deploy per customer.
 - AlpenData Entra app + customer admin consent for Microsoft 365
 - AlpenData Google Cloud OAuth client + operator refresh token for Drive
 - Infomaniak kDrive app password
@@ -70,12 +68,12 @@ override. Reach the Gateway only through the TLS or identity proxy; see
 `examples/Caddyfile.example`.
 
 The renderer rejects a root host directory, a host root that does not contain
-the tenant id, a RAGFlow dataset that is not scoped to the tenant id, insecure
-WebDAV, credential-bearing URLs, invalid environment-variable names, duplicate
-source IDs, trusted-proxy mode without proxy allowlisting, public HTTP
-origins, and disposable `accessTokenEnv` source credentials. A private HTTP
-RAGFlow endpoint requires the explicit `allowPrivateNetwork: true`
-acknowledgement.
+the tenant id, insecure WebDAV, credential-bearing URLs, invalid
+environment-variable names, duplicate source IDs, trusted-proxy mode without
+proxy allowlisting, public HTTP origins, and disposable `accessTokenEnv` source
+credentials. A plain-HTTP embedding endpoint requires the explicit
+`allowPrivateNetwork: true` acknowledgement, because document text is sent to
+it.
 
 `openclaw doctor --fix` reports leftover `accessTokenEnv` keys. It cannot mint
 Entra or Google client credentials; fill the canonical secret names instead.
@@ -159,7 +157,7 @@ deploy/agentbox/destroy-tenant.sh \
 ```
 
 The deletion helper refuses filesystem roots and paths that do not contain the
-confirmed tenant ID. Object-storage backups, RAGFlow data, OAuth grants, DNS,
+confirmed tenant ID. Object-storage backups, OAuth grants, DNS,
 and identity-provider assignments have separate owners and must also be removed.
 
 ## Source behavior
@@ -183,7 +181,8 @@ administrators can inspect that activity through `agentbox.audit`.
 ## Required proof
 
 Mocks cannot validate real OAuth consent, tenant permissions, throttling,
-provider-specific WebDAV behavior, RAGFlow parsing, or scanned-document OCR.
+provider-specific WebDAV behavior, document extraction coverage, or
+scanned-document OCR.
 Before a customer launch, run the corpus and isolation checklist in the
 [AgentBox product documentation](../../docs/agentbox/index.md) with real,
 non-production customer fixtures.

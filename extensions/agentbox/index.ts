@@ -1,3 +1,4 @@
+import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
 import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
 import {
   ErrorCodes,
@@ -5,13 +6,11 @@ import {
   type GatewayRequestHandlerOptions,
 } from "openclaw/plugin-sdk/gateway-runtime";
 import { definePluginEntry } from "./api.js";
-import {
-  agentBoxConfigSchema,
-  isTenantScopedDataset,
-  resolveAgentBoxConfig,
-} from "./src/config.js";
+import { agentBoxConfigSchema, resolveAgentBoxConfig } from "./src/config.js";
+import { openAgentBoxIndexStore, type AgentBoxIndexStore } from "./src/index-store.js";
+import { createAgentBoxEmbedder } from "./src/indexer.js";
 import { AgentBoxService } from "./src/service.js";
-import { createAgentBoxStateStore } from "./src/state.js";
+import { createAgentBoxAuditStore } from "./src/state.js";
 import { createAgentBoxSearchTool, createAgentBoxSyncTool } from "./src/tools.js";
 
 function resolveSearchActor(client: GatewayRequestHandlerOptions["client"]): string {
@@ -28,14 +27,15 @@ export default definePluginEntry({
   configSchema: agentBoxConfigSchema,
   register(api) {
     const config = resolveAgentBoxConfig(api.pluginConfig);
-    const state = createAgentBoxStateStore(api.runtime.state.openKeyedStore);
+    const audit = createAgentBoxAuditStore(api.runtime.state.openKeyedStore);
     let service: AgentBoxService | null = null;
+    let index: AgentBoxIndexStore | null = null;
 
     api.session.controls.registerControlUiDescriptor({
       surface: "tab",
       id: "documents",
       label: "Company documents",
-      description: "Document source health, RAGFlow status, and indexed company files.",
+      description: "Document source health, index status, and indexed company files.",
       icon: "fileText",
       group: "control",
       requiredScopes: ["operator.read"],
@@ -48,25 +48,15 @@ export default definePluginEntry({
         detail: string;
         remediation: string;
       }> = [];
-      if (config.backend.baseUrl.startsWith("http://")) {
+      if (config.index.embedding.baseUrl.startsWith("http://")) {
         findings.push({
-          checkId: "agentbox.backend.http",
+          checkId: "agentbox.embedding.http",
           severity: "warn",
-          title: "AgentBox RAGFlow transport is not encrypted",
+          title: "AgentBox embedding transport is not encrypted",
           detail:
-            "The configured RAGFlow backend uses HTTP. This is acceptable only inside the tenant's isolated private network.",
+            "The configured embedding endpoint uses HTTP. Document text is sent to it, so this is acceptable only on the tenant's isolated private network.",
           remediation:
-            "Use HTTPS, or verify that the backend is reachable only on an isolated tenant network.",
-        });
-      }
-      if (!isTenantScopedDataset(config.tenantId, config.backend.datasetId)) {
-        findings.push({
-          checkId: "agentbox.backend.dataset",
-          severity: "critical",
-          title: "AgentBox RAGFlow dataset is not tenant-scoped",
-          detail: `Dataset ${config.backend.datasetId} is not scoped to tenant ${config.tenantId}.`,
-          remediation:
-            "Give each customer a dedicated RAGFlow dataset whose id starts with the tenant id.",
+            "Use HTTPS, or verify that the endpoint is reachable only on an isolated tenant network.",
         });
       }
       if (config.entitlements.status === "suspended") {
@@ -112,13 +102,25 @@ export default definePluginEntry({
 
     api.registerService({
       id: "agentbox",
-      start: (context) => {
-        service = new AgentBoxService(config, state, context.logger);
+      start: async (context) => {
+        // The runtime hands out a DeepReadonly snapshot; embedding and extraction
+        // only read it. Same narrowing every other bundled plugin uses.
+        const openClawConfig = api.runtime.config.current() as OpenClawConfig;
+        const embedder = await createAgentBoxEmbedder({
+          config: config.index.embedding,
+          openClawConfig,
+        });
+        // The index is keyed to the embedding identity: vectors from a different
+        // model or endpoint are not comparable, so the store rebuilds instead.
+        index = openAgentBoxIndexStore({ embeddingIdentity: embedder.identity });
+        service = new AgentBoxService(config, index, embedder, audit, context.logger);
         service.start();
       },
       stop: () => {
         service?.stop();
         service = null;
+        index?.close();
+        index = null;
       },
     });
 
@@ -152,7 +154,7 @@ export default definePluginEntry({
       "agentbox.audit",
       handle(({ params }) => {
         const limit = params.limit;
-        return requireService().audit(
+        return requireService().auditTrail(
           typeof limit === "number" && Number.isInteger(limit) ? limit : undefined,
         );
       }),

@@ -305,6 +305,7 @@
   "provider-tools",
   "provider-usage",
   "document-extractor",
+  "document-extraction-runtime",
   "web-content-extractor",
   "provider-web-fetch-contract",
   "provider-web-fetch",

@@ -71,12 +71,25 @@ const agentBoxConfigObject = z
   .object({
     tenantId: sourceIdSchema,
     entitlements: entitlementsSchema,
-    backend: z
+    index: z
       .object({
-        baseUrl: z.url(),
-        datasetId: z.string().min(1),
-        apiKeyEnv: envNameSchema,
-        allowPrivateNetwork: z.boolean().default(false),
+        embedding: z
+          .object({
+            baseUrl: z.url(),
+            model: z.string().min(1),
+            apiKeyEnv: envNameSchema,
+            dimensions: z.number().int().min(1).optional(),
+            allowPrivateNetwork: z.boolean().default(false),
+          })
+          .strict(),
+        chunk: z
+          .object({
+            maxCharacters: z.number().int().min(200).max(8000).default(1500),
+            overlapCharacters: z.number().int().min(0).max(2000).default(200),
+          })
+          .strict()
+          .default({ maxCharacters: 1500, overlapCharacters: 200 }),
+        minSimilarity: z.number().min(0).max(1).default(0.15),
       })
       .strict(),
     sync: z
@@ -108,11 +121,19 @@ const agentBoxConfigObject = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.backend.baseUrl.startsWith("http://") && !value.backend.allowPrivateNetwork) {
+    const embedding = value.index.embedding;
+    if (embedding.baseUrl.startsWith("http://") && !embedding.allowPrivateNetwork) {
       ctx.addIssue({
         code: "custom",
-        message: "HTTP RAGFlow backends require allowPrivateNetwork: true",
-        path: ["backend", "allowPrivateNetwork"],
+        message: "HTTP embedding endpoints require allowPrivateNetwork: true",
+        path: ["index", "embedding", "allowPrivateNetwork"],
+      });
+    }
+    if (value.index.chunk.overlapCharacters >= value.index.chunk.maxCharacters) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Chunk overlap must be smaller than the chunk size",
+        path: ["index", "chunk", "overlapCharacters"],
       });
     }
     const quotas = value.entitlements.quotas;
@@ -161,8 +182,4 @@ export function requireConfiguredSecret(envName: string): string {
     throw new Error(`AgentBox requires the ${envName} environment variable.`);
   }
   return value;
-}
-
-export function isTenantScopedDataset(tenantId: string, datasetId: string): boolean {
-  return datasetId === tenantId || datasetId.startsWith(`${tenantId}-`);
 }

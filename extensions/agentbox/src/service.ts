@@ -1,7 +1,12 @@
-import { isTenantScopedDataset, type AgentBoxConfig, type AgentBoxEntitlements } from "./config.js";
-import { RagFlowClient, type AgentBoxSearchResult } from "./ragflow-client.js";
+import type { AgentBoxConfig, AgentBoxEntitlements } from "./config.js";
+import type {
+  AgentBoxIndexMatch,
+  AgentBoxIndexStore,
+  AgentBoxIndexedDocument,
+} from "./index-store.js";
+import { chunkDocumentText, extractDocumentText, type AgentBoxEmbedder } from "./indexer.js";
 import { createSourceAdapter, type AgentBoxDocument } from "./sources.js";
-import { digestSearchQuery, type AgentBoxDocumentState, type AgentBoxStateStore } from "./state.js";
+import { digestSearchQuery, type AgentBoxAuditStore } from "./state.js";
 
 type AgentBoxLogger = {
   info: (message: string) => void;
@@ -9,10 +14,15 @@ type AgentBoxLogger = {
   error: (message: string) => void;
 };
 
-type AgentBoxDocumentClient = Pick<RagFlowClient, "delete" | "search" | "upload"> &
-  Partial<Pick<RagFlowClient, "inspect">>;
+export type AgentBoxSearchResult = {
+  content: string;
+  documentId: string;
+  documentName?: string;
+  sourceUrl?: string;
+  similarity?: number;
+};
 
-export type AgentBoxBackendStatus = {
+export type AgentBoxIndexStatus = {
   state: "ready" | "error";
   error?: string;
 };
@@ -25,25 +35,17 @@ export type AgentBoxSourceStatus = {
   uploaded: number;
   deleted: number;
   skipped: number;
+  unsupported: number;
   lastSyncAt?: string;
   error?: string;
 };
-
-/**
- * Documents indexed before quotas shipped carry no recorded size, so the total is
- * reported as partial rather than as a smaller measured number. An operator must
- * be able to tell "10 GB used" from "10 GB plus 40 files we have not sized yet".
- */
-export type AgentBoxStorageUsage =
-  | { kind: "measured"; bytes: number }
-  | { kind: "partial"; bytes: number; unmeasuredDocuments: number };
 
 export type AgentBoxSubscriptionStatus = {
   planId: string;
   state: AgentBoxEntitlements["status"];
   validUntil?: string;
   quotas: AgentBoxEntitlements["quotas"];
-  usage: { documents: number; storage: AgentBoxStorageUsage };
+  usage: { documents: number; bytes: number };
 };
 
 export type AgentBoxStatus = {
@@ -53,7 +55,7 @@ export type AgentBoxStatus = {
   lastSyncStartedAt?: string;
   lastSyncCompletedAt?: string;
   subscription: AgentBoxSubscriptionStatus;
-  backend: AgentBoxBackendStatus;
+  index: AgentBoxIndexStatus;
   sources: AgentBoxSourceStatus[];
 };
 
@@ -61,33 +63,24 @@ export type AgentBoxStatus = {
 type AgentBoxQuotaBudget = { documents: number; bytes: number };
 
 export class AgentBoxService {
-  private readonly client: AgentBoxDocumentClient;
   private readonly sourceStatuses: AgentBoxSourceStatus[];
   private timer: ReturnType<typeof setTimeout> | undefined;
   private syncPromise: Promise<AgentBoxStatus> | undefined;
   private running = false;
   private lastSyncStartedAt: string | undefined;
   private lastSyncCompletedAt: string | undefined;
-  private backendStatus: AgentBoxBackendStatus = {
-    state: "error",
-    error: "RAGFlow has not been checked yet.",
-  };
-  private usage: AgentBoxSubscriptionStatus["usage"] = {
-    documents: 0,
-    storage: { kind: "measured", bytes: 0 },
-  };
+  private indexStatus: AgentBoxIndexStatus = { state: "ready" };
+  private usage: AgentBoxSubscriptionStatus["usage"] = { documents: 0, bytes: 0 };
   private readonly createAdapter: typeof createSourceAdapter;
 
   constructor(
     private readonly config: AgentBoxConfig,
-    private readonly state: AgentBoxStateStore,
+    private readonly index: AgentBoxIndexStore,
+    private readonly embedder: AgentBoxEmbedder,
+    private readonly audit: AgentBoxAuditStore,
     private readonly logger: AgentBoxLogger,
-    dependencies: {
-      client?: AgentBoxDocumentClient;
-      createAdapter?: typeof createSourceAdapter;
-    } = {},
+    dependencies: { createAdapter?: typeof createSourceAdapter } = {},
   ) {
-    this.client = dependencies.client ?? new RagFlowClient(config.backend);
     this.createAdapter = dependencies.createAdapter ?? createSourceAdapter;
     this.sourceStatuses = config.sources.map((source) => ({
       id: source.id,
@@ -97,7 +90,9 @@ export class AgentBoxService {
       uploaded: 0,
       deleted: 0,
       skipped: 0,
+      unsupported: 0,
     }));
+    this.usage = this.index.totals();
   }
 
   start(): void {
@@ -130,16 +125,15 @@ export class AgentBoxService {
         state: this.config.entitlements.status,
         validUntil: this.config.entitlements.validUntil,
         quotas: { ...this.config.entitlements.quotas },
-        usage: this.usage,
+        usage: { ...this.usage },
       },
-      backend: { ...this.backendStatus },
+      index: { ...this.indexStatus },
       sources: this.sourceStatuses.map((source) => ({ ...source })),
     };
   }
 
   async refreshStatus(): Promise<AgentBoxStatus> {
-    this.usage = await this.readUsage();
-    this.backendStatus = await this.probeBackend();
+    this.usage = this.index.totals();
     return this.status();
   }
 
@@ -149,32 +143,29 @@ export class AgentBoxService {
     actor = "agent-tool",
   ): Promise<AgentBoxSearchResult[]> {
     this.requireActiveSubscription();
-    const raw = await this.client.search(question, limit);
-    // Retrieval is bound to this instance's indexed document IDs. RAGFlow dataset
-    // isolation is the primary boundary; this filter fails closed if a foreign
-    // chunk leaks through the shared retrieval API.
-    const authorized = await this.state.authorizedDocumentIds();
-    const allowed = raw.filter((result) => authorized.has(result.documentId));
-    const droppedCount = raw.length - allowed.length;
-    if (droppedCount > 0) {
-      this.logger.warn(`AgentBox dropped ${droppedCount} unauthorized retrieval chunks.`);
-    }
-    await this.state.appendAudit({
+    const queryEmbedding = await this.embedder.embedQuery(question);
+    // Retrieval reads this tenant's own index only. There is no shared corpus to
+    // filter, so a match cannot originate from another customer's documents.
+    const matches: AgentBoxIndexMatch[] = this.index.search(
+      queryEmbedding,
+      typeof limit === "number" ? limit : 8,
+      this.config.index.minSimilarity,
+    );
+    await this.audit.append({
       kind: "audit",
       at: new Date().toISOString(),
       action: "search",
       actor,
       tenantId: this.config.tenantId,
       ...digestSearchQuery(question),
-      resultCount: allowed.length,
-      droppedCount,
-      documentIds: allowed.map((result) => result.documentId),
+      resultCount: matches.length,
+      documentIds: matches.map((match) => match.documentId),
     });
-    return allowed;
+    return matches;
   }
 
-  async audit(limit?: number) {
-    return await this.state.listAudit(limit);
+  async auditTrail(limit?: number) {
+    return await this.audit.list(limit);
   }
 
   runOnce(): Promise<AgentBoxStatus> {
@@ -204,7 +195,7 @@ export class AgentBoxService {
 
   private async performSync(): Promise<AgentBoxStatus> {
     this.lastSyncStartedAt = new Date().toISOString();
-    this.usage = await this.readUsage();
+    this.usage = this.index.totals();
     // A suspended tenant is meant to have a stopped Gateway. Refusing to scan is
     // the second line of defence when the control plane failed to stop this one.
     if (this.config.entitlements.status === "suspended") {
@@ -214,18 +205,9 @@ export class AgentBoxService {
       this.lastSyncCompletedAt = new Date().toISOString();
       return this.status();
     }
-    this.backendStatus = await this.probeBackend();
-    if (this.backendStatus.state === "error") {
-      for (const status of this.sourceStatuses) {
-        status.state = "error";
-        status.error = this.backendStatus.error;
-      }
-      this.lastSyncCompletedAt = new Date().toISOString();
-      return this.status();
-    }
     const budget: AgentBoxQuotaBudget = {
       documents: this.config.entitlements.quotas.maxDocuments - this.usage.documents,
-      bytes: this.config.entitlements.quotas.maxStorageBytes - this.usage.storage.bytes,
+      bytes: this.config.entitlements.quotas.maxStorageBytes - this.usage.bytes,
     };
     for (const source of this.config.sources) {
       const status = this.sourceStatuses.find((entry) => entry.id === source.id);
@@ -237,6 +219,7 @@ export class AgentBoxService {
       status.uploaded = 0;
       status.deleted = 0;
       status.skipped = 0;
+      status.unsupported = 0;
       try {
         await this.syncSource(source.id, status, budget);
         status.state = "ready";
@@ -248,9 +231,9 @@ export class AgentBoxService {
       }
     }
     this.lastSyncCompletedAt = new Date().toISOString();
-    this.usage = await this.readUsage();
+    this.usage = this.index.totals();
     const status = this.status();
-    await this.state.appendAudit({
+    await this.audit.append({
       kind: "audit",
       at: this.lastSyncCompletedAt,
       action: "sync",
@@ -272,9 +255,9 @@ export class AgentBoxService {
       throw new Error(`Unknown AgentBox source ${sourceId}.`);
     }
     const adapter = this.createAdapter(sourceConfig);
-    const cursor = await this.state.cursorForSource(sourceId);
+    const cursor = this.index.cursorForSource(sourceId);
     const scan = await adapter.scan(cursor);
-    const previous = await this.state.documentsForSource(sourceId);
+    const previous = this.index.documentsForSource(sourceId);
     const previousByKey = new Map(previous.map((entry) => [entry.sourceKey, entry]));
     const incomingByKey = new Map<string, AgentBoxDocument>();
     for (const document of scan.documents) {
@@ -293,11 +276,10 @@ export class AgentBoxService {
       if (!entry) {
         continue;
       }
-      await this.client.delete([entry.documentId]);
-      await this.state.deleteDocument(key);
+      this.index.deleteDocument(key);
       previousByKey.delete(key);
       budget.documents += 1;
-      budget.bytes += entry.sizeBytes ?? 0;
+      budget.bytes += entry.sizeBytes;
       status.deleted += 1;
     }
     for (const document of incomingByKey.values()) {
@@ -313,7 +295,7 @@ export class AgentBoxService {
       }
       // Replacing a document returns its slot to the budget before the new copy
       // is measured, so an in-place update never counts twice against the plan.
-      const replacedBytes = existing ? (existing.sizeBytes ?? 0) : 0;
+      const replacedBytes = existing?.sizeBytes ?? 0;
       const replacedDocuments = existing ? 1 : 0;
       const bytes = await document.read();
       if (bytes.byteLength > this.config.sync.maxFileBytes) {
@@ -325,42 +307,44 @@ export class AgentBoxService {
         replacedBytes,
         replacedDocuments,
       });
-      if (existing) {
-        await this.client.delete([existing.documentId]);
-      }
-      const documentId = await this.client.upload({
-        filename: document.name,
-        mimeType: document.mimeType,
+      const text = await extractDocumentText({
         bytes,
-        metadata: {
-          tenant_id: this.config.tenantId,
-          source_id: sourceId,
-          source_key: document.key,
-          modified_at_ms: document.modifiedAtMs,
-          ...(document.sourceUrl ? { source_url: document.sourceUrl } : {}),
-        },
+        fileName: document.name,
+        ...(document.mimeType ? { mimeType: document.mimeType } : {}),
       });
-      const next: AgentBoxDocumentState = {
-        kind: "document",
-        sourceId,
+      if (text === null) {
+        status.unsupported += 1;
+        continue;
+      }
+      const chunks = chunkDocumentText(text, this.config.index.chunk);
+      if (chunks.length === 0) {
+        status.unsupported += 1;
+        continue;
+      }
+      const embeddings = await this.embedder.embedDocuments(chunks);
+      const record: AgentBoxIndexedDocument = {
         sourceKey: document.key,
-        fingerprint: document.fingerprint,
-        documentId,
+        sourceId,
+        documentId: existing?.documentId ?? `${sourceId}:${document.key}`,
         name: document.name,
-        sourceUrl: document.sourceUrl,
+        fingerprint: document.fingerprint,
+        ...(document.sourceUrl ? { sourceUrl: document.sourceUrl } : {}),
         sizeBytes: bytes.byteLength,
       };
-      await this.state.putDocument(next);
+      this.index.putDocument(
+        record,
+        chunks.map((chunk, ordinal) => ({ text: chunk, embedding: embeddings[ordinal] ?? [] })),
+      );
       budget.documents += replacedDocuments - 1;
       budget.bytes += replacedBytes - bytes.byteLength;
       status.uploaded += 1;
     }
     if (scan.cursor) {
-      await this.state.putCursor(sourceId, scan.cursor);
+      this.index.putCursor(sourceId, scan.cursor);
     }
-    status.indexed = (await this.state.documentsForSource(sourceId)).length;
+    status.indexed = this.index.documentsForSource(sourceId).length;
     this.logger.info(
-      `AgentBox source ${sourceId}: ${status.uploaded} uploaded, ${status.deleted} deleted, ${status.skipped} unchanged.`,
+      `AgentBox source ${sourceId}: ${status.uploaded} indexed, ${status.deleted} deleted, ${status.skipped} unchanged, ${status.unsupported} unsupported.`,
     );
   }
 
@@ -393,40 +377,6 @@ export class AgentBoxService {
       throw new Error(
         `Plan ${this.config.entitlements.planId} allows ${quotas.maxStorageBytes} indexed bytes. ${name} was not indexed. Upgrade the plan or remove documents from the source.`,
       );
-    }
-  }
-
-  private async readUsage(): Promise<AgentBoxSubscriptionStatus["usage"]> {
-    const totals = await this.state.indexTotals();
-    const unmeasuredDocuments = totals.documents - totals.measuredDocuments;
-    return {
-      documents: totals.documents,
-      storage:
-        unmeasuredDocuments > 0
-          ? { kind: "partial", bytes: totals.bytes, unmeasuredDocuments }
-          : { kind: "measured", bytes: totals.bytes },
-    };
-  }
-
-  private async probeBackend(): Promise<AgentBoxBackendStatus> {
-    if (!isTenantScopedDataset(this.config.tenantId, this.config.backend.datasetId)) {
-      return {
-        state: "error",
-        error: `RAGFlow dataset ${this.config.backend.datasetId} is not scoped to tenant ${this.config.tenantId}.`,
-      };
-    }
-    const inspect = this.client.inspect;
-    if (!inspect) {
-      return { state: "ready" };
-    }
-    try {
-      await inspect.call(this.client);
-      return { state: "ready" };
-    } catch (error) {
-      return {
-        state: "error",
-        error: `RAGFlow is unreachable: ${this.errorMessage(error)}`,
-      };
     }
   }
 

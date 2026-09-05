@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isTenantScopedDataset, requireConfiguredSecret, resolveAgentBoxConfig } from "./config.js";
+import { requireConfiguredSecret, resolveAgentBoxConfig } from "./config.js";
 
 afterEach(() => {
   delete process.env.AGENTBOX_TEST_SECRET;
@@ -36,11 +36,13 @@ describe("AgentBox config", () => {
           minSyncIntervalMinutes: 15,
         },
       },
-      backend: {
-        baseUrl: "http://ragflow.internal:9380",
-        datasetId: "acme",
-        apiKeyEnv: "RAGFLOW_API_KEY",
-        allowPrivateNetwork: true,
+      index: {
+        embedding: {
+          baseUrl: "http://embeddings.internal:8080/v1",
+          model: "bge-multilingual",
+          apiKeyEnv: "AGENTBOX_EMBEDDING_API_KEY",
+          allowPrivateNetwork: true,
+        },
       },
       sources: [
         { id: "local", type: "local", root: "/documents" },
@@ -63,8 +65,8 @@ describe("AgentBox config", () => {
       "microsoft-365",
       "webdav",
     ]);
-    expect(isTenantScopedDataset("acme", "acme-internal")).toBe(true);
-    expect(isTenantScopedDataset("acme", "other")).toBe(false);
+    expect(config.index.chunk.maxCharacters).toBe(1500);
+    expect(config.index.chunk.overlapCharacters).toBe(200);
   });
 
   it("rejects a corpus or cadence the plan does not cover", () => {
@@ -80,10 +82,12 @@ describe("AgentBox config", () => {
           minSyncIntervalMinutes: 60,
         },
       },
-      backend: {
-        baseUrl: "https://ragflow.example.test",
-        datasetId: "acme",
-        apiKeyEnv: "RAGFLOW_API_KEY",
+      index: {
+        embedding: {
+          baseUrl: "https://embeddings.example.test/v1",
+          model: "bge-multilingual",
+          apiKeyEnv: "AGENTBOX_EMBEDDING_API_KEY",
+        },
       },
     };
 
@@ -134,10 +138,12 @@ describe("AgentBox config", () => {
           minSyncIntervalMinutes: 15,
         },
       },
-      backend: {
-        baseUrl: "https://ragflow.example.test",
-        datasetId: "acme",
-        apiKeyEnv: "RAGFLOW_API_KEY",
+      index: {
+        embedding: {
+          baseUrl: "https://embeddings.example.test/v1",
+          model: "bge-multilingual",
+          apiKeyEnv: "AGENTBOX_EMBEDDING_API_KEY",
+        },
       },
     };
     expect(() =>
@@ -179,9 +185,11 @@ describe("AgentBox config", () => {
     expect(() =>
       resolveAgentBoxConfig({
         ...base,
-        backend: {
-          ...base.backend,
-          baseUrl: "http://ragflow.internal:9380",
+        index: {
+          embedding: {
+            ...base.index.embedding,
+            baseUrl: "http://embeddings.internal:8080/v1",
+          },
         },
         sources: [{ id: "local", type: "local", root: "/documents" }],
       }),

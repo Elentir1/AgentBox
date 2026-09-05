@@ -2,7 +2,7 @@
 summary: "AlpenData AgentBox architecture, onboarding, document sources, and security model"
 read_when:
   - Provisioning or reviewing an AlpenData AgentBox tenant
-  - Changing AgentBox document sources, RAGFlow, or employee identity
+  - Changing AgentBox document sources, the document index, or employee identity
   - Diagnosing empty Company knowledge or citation failures
 title: "AlpenData AgentBox"
 ---
@@ -34,10 +34,9 @@ AgentBox does not place mutually untrusted customers inside one Gateway.
 
 Each deployment has separate:
 
-- Gateway and RAGFlow network boundaries
-- SQLite state and agent databases
+- Gateway network boundary
+- SQLite state, agent, and document-index databases
 - document source credentials
-- RAGFlow dataset
 - workspace and document mounts
 - backups and retention policy
 
@@ -57,7 +56,7 @@ by the AgentBox image pipeline; the template does not publish an image.
 4. Render the tenant deployment and fill `runtime.env` with real values.
 5. Provision the Gateway and wait for both liveness and readiness.
 6. Open **Company documents** and confirm live `agentbox.status`. Empty sources,
-   RAGFlow errors, and expired credentials are visible states, not an all-green
+   index errors, and expired credentials are visible states, not an all-green
    checklist.
 7. Ask a known-answer question against the real corpus and verify that
    citations come from `agentbox_search`.
@@ -135,12 +134,20 @@ All sources normalize into the same lifecycle:
 
 `discover -> compare -> download -> upload -> parse -> index -> delete`
 
-RAGFlow is deployed per customer and stays **outside** the AgentBox Compose
-project. The plugin uploads source files, attaches tenant and provenance
-metadata, starts parsing, and exposes citation-ready retrieval through
-`agentbox_search`. If RAGFlow is down, the dataset is not tenant-scoped, or a
-private HTTP URL is used without `allowPrivateNetwork`, `agentbox.status` and
-Company knowledge show an error. Zero documents is not "everything is fine".
+The document index is **inside** the tenant deployment: extracted text, chunks,
+and embedding vectors live in a SQLite database in the tenant's own state volume.
+There is no search server to deploy, scale, or patch per customer, and no shared
+dataset that another customer's documents could reach.
+
+Only embedding calls leave the deployment, to the OpenAI-compatible endpoint named
+in the manifest. That endpoint sees document text, so it is a subprocessor and
+belongs in the customer contract. Plain HTTP to it requires an explicit
+`allowPrivateNetwork` acknowledgement.
+
+Retrieval requires a minimum similarity. An off-topic question returns nothing
+rather than the least-bad document, because a confident citation of an unrelated
+file is the same product defect as an invented source. Zero documents is not
+"everything is fine".
 
 ## Chat and citations
 
@@ -155,10 +162,10 @@ This version authorizes one document corpus as a group. Every employee allowed
 by the trusted proxy can search every document indexed for that AgentBox. The
 Company knowledge page states that limitation.
 
-Search still fails closed at the instance boundary. Retrieval is limited to
-the tenant's RAGFlow dataset, then filtered to document IDs this AgentBox has
-indexed. Chunks from another customer are dropped and recorded in the audit
-log.
+Search cannot leave the instance: retrieval reads this deployment's own index
+file and there is no shared corpus to filter. Cross-tenant leakage would require
+access to the tenant's volume, which is the same boundary that protects its
+configuration and secrets.
 
 Source-level or per-document ACL synchronization is not an enforcement
 boundary. If two employee groups must not see the same documents, provision
@@ -166,11 +173,11 @@ separate AgentBox deployments.
 
 ## Audit
 
-Each AgentBox keeps a 90-day SQLite audit trail of document searches and
+Each AgentBox keeps a 90-day audit trail of document searches and
 synchronization runs. Search entries store the actor, a SHA-256 query digest,
-a short query preview, authorized document IDs, and the number of dropped
-foreign chunks. Administrators can read the trail through `agentbox.audit`.
-The trail does not store document bodies or source credentials.
+a short query preview, and the matched document IDs. Administrators can read the
+trail through `agentbox.audit`. The trail does not store document bodies or
+source credentials.
 
 ## Operations that live outside this repository
 
@@ -181,7 +188,6 @@ own these operator jobs. Do not simulate them in the Control UI.
   input, not a published default tag.
 - Provision a dedicated VM, encrypted volume, Compose stack, and TLS at the
   customer origin.
-- Run an isolated RAGFlow whose dataset id is `{tenantId}` or `{tenantId}-…`.
 - Place an IdP reverse proxy (Entra or Google) in front of the Gateway. The
   proxy authenticates the employee, **overwrites** the user header and
   `x-openclaw-scopes`, and blocks direct Gateway access.
@@ -203,15 +209,19 @@ proof.
 
 - OAuth consent and token renewal for Google and Microsoft
 - WebDAV behavior for the selected kDrive tenant
-- native Office files, text PDFs, scanned PDFs, and large files
+- native Office files, text PDFs, scanned PDFs, and large files against the
+  registered document extractors: an unsupported format is a visible
+  "unsupported" count, not a silently empty document
 - rename, update, deletion, permission removal, and cursor reset, including
   Graph `410 Gone`
 - negative cross-customer and unauthorized-user tests
+- embedding endpoint quotas, latency, and cost on a representative corpus
 - backup, restore, key rotation, upgrade, export, and deletion
 - legal review of the MIT notices, product trademark, privacy terms, and Swiss
   FADP or applicable GDPR obligations
 
 Contract tests cover source adapters, token retry, tenant-scoped rendering,
-restore and deletion safeguards, citation formatting, known-answer fixture
-retrieval, and cross-tenant document-id filtering. They do not replace live
-OAuth consent, provider quotas, RAGFlow OCR, or production isolation drills.
+restore and deletion safeguards, citation formatting, known-answer retrieval on a
+real index, the similarity floor, and per-tenant index separation. They do not
+replace live OAuth consent, provider quotas, OCR quality, or production isolation
+drills.

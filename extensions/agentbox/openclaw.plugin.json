@@ -1,43 +1,49 @@
 {
   "id": "agentbox",
   "name": "AlpenData AgentBox",
-  "description": "Synchronize business documents from Microsoft 365, Google Drive, and Infomaniak kDrive into an isolated RAGFlow dataset.",
+  "description": "Synchronize business documents from Microsoft 365, Google Drive, and Infomaniak kDrive into the tenant's own searchable index.",
   "enabledByDefault": false,
   "activation": {
     "onStartup": true
   },
   "contracts": {
-    "tools": ["agentbox_search", "agentbox_sync"]
+    "tools": [
+      "agentbox_search",
+      "agentbox_sync"
+    ]
   },
   "uiHints": {
     "tenantId": {
       "label": "Tenant ID",
       "help": "Stable identifier for the isolated customer deployment."
     },
-    "backend.baseUrl": {
-      "label": "RAGFlow Base URL",
-      "help": "Base URL of the tenant's isolated RAGFlow service."
-    },
-    "backend.datasetId": {
-      "label": "RAGFlow Dataset ID"
-    },
-    "backend.apiKeyEnv": {
-      "label": "RAGFlow API Key Environment Variable",
-      "sensitive": true
-    },
-    "backend.allowPrivateNetwork": {
-      "label": "Allow Private RAGFlow Network",
-      "help": "Required only when RAGFlow is reached over an isolated private network.",
-      "advanced": true
-    },
     "sync.intervalMinutes": {
       "label": "Synchronization Interval (minutes)"
+    },
+    "index.embedding.baseUrl": {
+      "label": "Embedding Endpoint",
+      "help": "Base URL of the OpenAI-compatible endpoint used to embed documents and queries."
+    },
+    "index.embedding.model": {
+      "label": "Embedding Model"
+    },
+    "index.embedding.apiKeyEnv": {
+      "label": "Embedding API Key Environment Variable",
+      "help": "Name of the environment variable holding the endpoint credential. Never the value."
+    },
+    "index.embedding.allowPrivateNetwork": {
+      "label": "Allow Private Embedding Network",
+      "help": "Required only when the embedding endpoint is reached over plain HTTP on an isolated private network."
     }
   },
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
-    "required": ["tenantId", "backend", "sources"],
+    "required": [
+      "tenantId",
+      "backend",
+      "sources"
+    ],
     "properties": {
       "tenantId": {
         "type": "string",
@@ -46,20 +52,39 @@
       "backend": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["baseUrl", "datasetId", "apiKeyEnv"],
+        "required": [
+          "baseUrl",
+          "datasetId",
+          "apiKeyEnv"
+        ],
         "properties": {
-          "baseUrl": { "type": "string" },
-          "datasetId": { "type": "string" },
-          "apiKeyEnv": { "type": "string" },
-          "allowPrivateNetwork": { "type": "boolean" }
+          "baseUrl": {
+            "type": "string"
+          },
+          "datasetId": {
+            "type": "string"
+          },
+          "apiKeyEnv": {
+            "type": "string"
+          },
+          "allowPrivateNetwork": {
+            "type": "boolean"
+          }
         }
       },
       "sync": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "intervalMinutes": { "type": "number", "minimum": 1, "maximum": 1440 },
-          "maxFileBytes": { "type": "number", "minimum": 1024 }
+          "intervalMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "maxFileBytes": {
+            "type": "number",
+            "minimum": 1024
+          }
         }
       },
       "sources": {
@@ -67,24 +92,56 @@
         "minItems": 1,
         "items": {
           "type": "object",
-          "required": ["id", "type"],
+          "required": [
+            "id",
+            "type"
+          ],
           "properties": {
-            "id": { "type": "string" },
+            "id": {
+              "type": "string"
+            },
             "type": {
               "type": "string",
-              "enum": ["google-drive", "local", "microsoft-365", "webdav"]
+              "enum": [
+                "google-drive",
+                "local",
+                "microsoft-365",
+                "webdav"
+              ]
             },
-            "root": { "type": "string" },
-            "driveId": { "type": "string" },
-            "baseUrl": { "type": "string" },
-            "rootPath": { "type": "string" },
-            "entraTenantIdEnv": { "type": "string" },
-            "clientIdEnv": { "type": "string" },
-            "clientSecretEnv": { "type": "string" },
-            "refreshTokenEnv": { "type": "string" },
-            "usernameEnv": { "type": "string" },
-            "passwordEnv": { "type": "string" },
-            "allowPrivateNetwork": { "type": "boolean" }
+            "root": {
+              "type": "string"
+            },
+            "driveId": {
+              "type": "string"
+            },
+            "baseUrl": {
+              "type": "string"
+            },
+            "rootPath": {
+              "type": "string"
+            },
+            "entraTenantIdEnv": {
+              "type": "string"
+            },
+            "clientIdEnv": {
+              "type": "string"
+            },
+            "clientSecretEnv": {
+              "type": "string"
+            },
+            "refreshTokenEnv": {
+              "type": "string"
+            },
+            "usernameEnv": {
+              "type": "string"
+            },
+            "passwordEnv": {
+              "type": "string"
+            },
+            "allowPrivateNetwork": {
+              "type": "boolean"
+            }
           }
         }
       }

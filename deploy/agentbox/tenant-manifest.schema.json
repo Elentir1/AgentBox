@@ -111,16 +111,17 @@
         "documents": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["backend", "sources"],
+          "required": ["embedding", "sources"],
           "properties": {
-            "backend": {
+            "embedding": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["baseUrl", "datasetId", "apiKeyEnv"],
+              "required": ["baseUrl", "model", "apiKeyEnv"],
               "properties": {
                 "baseUrl": { "type": "string", "format": "uri" },
-                "datasetId": { "type": "string", "minLength": 1 },
+                "model": { "type": "string", "minLength": 1 },
                 "apiKeyEnv": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+                "dimensions": { "type": "integer", "minimum": 1 },
                 "allowPrivateNetwork": { "type": "boolean" }
               }
             },
